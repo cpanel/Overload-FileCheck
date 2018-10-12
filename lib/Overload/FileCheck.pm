@@ -8,6 +8,8 @@ use warnings;
 require XSLoader;
 XSLoader::load( __PACKAGE__ );
 
+# TODO: use exporter & update doc
+
 # hash for every filecheck we can mock
 #   and their corresonding OP_TYPE
 my %MAP_FC_OP = (
@@ -36,7 +38,7 @@ sub mock {
 
     my $optype = $MAP_FC_OP{$check};
     die qq[-$check is already mocked by Overload::FileCheck] if exists $_current_mocks->{$optype};
-  
+
     $_current_mocks->{$optype} = $sub;
 
     _mock_ftOP( $optype  ); # XS code
@@ -55,7 +57,7 @@ sub unmock {
     my $optype = $MAP_FC_OP{$check};
 
     delete $_current_mocks->{$optype};
-  
+
     _unmock_ftOP( $optype ); # XS code
   }
 
@@ -63,7 +65,7 @@ sub unmock {
 }
 
 sub unmock_all {
-  
+
   my @mocks = sort keys %$_current_mocks;
   return unless scalar @mocks;
   unmock( @mocks );
@@ -91,21 +93,6 @@ sub _get_filecheck_ops_map {
   return { %MAP_FC_OP }; # return a copy
 }
 
-=pod
-
-use Overload::FileCheck '-e' => \&my_dash_e;
-
-or 
-
-use Overload::FileCheck ();
-
-Overload::FileCheck::mock( '-e' => sub { 1 } );
-
-Overload::FileCheck::unmock( qw{-e -f} );
-Overload::FileCheck::unmock_all( qw{-e -f} );
-
-=cut
-
 1;
 
 =pod
@@ -126,7 +113,7 @@ Overload::FileCheck - override/mock perl filecheck
 
   use Overload::FileCheck '-e' => \&my_dash_e;
 
-  # or 
+  # or
 
   use Overload::FileCheck ();
 
@@ -138,9 +125,10 @@ Overload::FileCheck - override/mock perl filecheck
 
 =head1 DESCRIPTION
 
-Overload::FileCheck provides a hook system to mock system filechecks OPs
-So you would be able to provide your own pure perl code in order to 
-mock checks like: -e, -f, -z, ...
+Overload::FileCheck provides a hook system to mock PErl filechecks OPs
+
+With this module you can provide your own pure perl code when performing
+file checks using on of the -X ops: -e, -f, -z, ...
 
 https://perldoc.perl.org/functions/-X.html
 
@@ -175,9 +163,91 @@ https://perldoc.perl.org/functions/-X.html
   platforms)
 
 
+Also view pp_sys.c from the Perl source code, where are defined the original OPs.
+
 =head1 Usage
 
-need some doc there... and more samples..
+When using this module, you can decide to mock filecheck OPs on import or later
+at run time.
+
+=head2 Mocking filecheck at import time
+
+    use Overload::FileCheck '-e' => \&my_dash_e, -f => sub { 1 };
+
+
+    sub dash_e {
+        my ( $file ) = @_;
+
+        # return true on -e on non existant file
+        return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
+
+        # claim that /tmp is not available
+        return 0 if $file eq '/tmp';
+
+        # delegate the answer to the CORE -e, we do not control these files
+        return -1;
+    }
+
+=head2 Mocking filecheck at run time
+
+You can also get a similar behavior by declaring the overload later at run time.
+
+
+    use Overload::FileCheck (); # no import
+
+    Overload::FileCheck::mock( '-e' => \&my_dash_e );
+    Overload::FileCheck::mock( '-f' => sub { 1 } );
+
+    sub dash_e {
+        my ( $file ) = @_;
+
+        # return true on -e on non existant file
+        return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
+
+        # claim that /tmp is not available
+        return 0 if $file eq '/tmp';
+
+        # delegate the answer to the CORE -e, we do not control these files
+        return -1;
+    }
+
+=head1 Available functions
+
+=head2 mock( $check, $CODE )
+
+mock function is used to mock one of the filecheck op.
+
+The first argument is one of the file check: '-f', '-e', ... where the dash is optional.
+It also accepts 'e', 'f', ...
+
+When trying to mock a filecheck already mocked, the function will die with an error like
+
+  -f is already mocked by Overload::FileCheck
+
+This would guarantee that you are not mocking multiple times the same filecheck in your codebase.
+
+Otherwise returns 1 on success.
+
+  # this is probably a very bad idea to do this in your codebase
+  # but can be useful for some testing
+  # in that sample all '-e' checks will always return true...
+  mock( '-e' => sub { 1 } )
+
+=head2 unmock( $check, [@extra_checks] )
+
+Disable the effect of one or more specific mock.
+
+  unmock( '-e' );
+  unmock( 'e' );            # also work without the dash
+  unmock( qw{-e -f -z} );
+  unmock( qw{e f} );        # also work without the dashes
+
+=head2 unmock_all()
+
+By a simple call to unmock_all, you would disable the effect of overriding the
+filecheck OPs. (not that the XS code is still plugged in, but fallback as soon
+as possible to the original OP)
+
 
 =head1 Notice
 
@@ -202,10 +272,9 @@ OF THE SOFTWARE IS WITH YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE
 REPAIR, OR CORRECTION.
 
 IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY
-WHO MAY MODIFY AND/OR REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE TO YOU FOR DAMAGES,        
-INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE     
-SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR     
-THIRD PARTIES OR A FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS  
+WHO MAY MODIFY AND/OR REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE TO YOU FOR DAMAGES,
+INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE
+SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR
+THIRD PARTIES OR A FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS
 BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
- 
