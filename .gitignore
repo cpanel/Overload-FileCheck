@@ -12,3 +12,4 @@ FileCheck.o
 Makefile.old
 MANIFEST.bak
 Overload-FileCheck-*
+.build

@@ -3,13 +3,10 @@ package Overload::FileCheck;
 use strict;
 use warnings;
 
-#use Carp;
-
-our $VERSION = '0.01';
+# ABSTRACT: override/mock perl file checks ops
 
 require XSLoader;
-XSLoader::load(__PACKAGE__, $VERSION );
-
+XSLoader::load( __PACKAGE__ );
 
 # hash for every filecheck we can mock
 #   and their corresonding OP_TYPE
@@ -111,27 +108,104 @@ Overload::FileCheck::unmock_all( qw{-e -f} );
 
 1;
 
-__END__
-sub import
-{
-   my $class = shift;
-   my %args = @_;
+=pod
 
-   my $package = caller;
+=encoding utf8
 
-   my $substr = delete $args{substr};
-   defined $substr or $substr = "_substr";
+=head1 NAME
 
-   keys %args and
-      croak "Unrecognised extra keys to $class: " . join( ", ", sort keys %args );
+Overload::FileCheck - override/mock perl filecheck
 
-   no strict 'refs';
+=begin HTML
 
-   unless( ref $substr ) {
-      $substr = \&{$package."::$substr"};
-   }
+<p><img src="https://travis-ci.org/atoomic/Overload-FileCheck.svg?branch=released" width="81" height="18" alt="Travis CI" /></p>
 
-   # This somewhat steps on overload.pm 's toes
-   *{$package."::(substr"} = $substr;
-}
+=end HTML
 
+=head1 SYNOPSIS
+
+  use Overload::FileCheck '-e' => \&my_dash_e;
+
+  # or 
+
+  use Overload::FileCheck ();
+
+  Overload::FileCheck::mock( '-e' => sub { 1 } );
+
+  Overload::FileCheck::unmock( qw{-e -f} );
+  Overload::FileCheck::unmock_all( qw{-e -f} );
+
+
+=head1 DESCRIPTION
+
+Overload::FileCheck provides a hook system to mock system filechecks OPs
+So you would be able to provide your own pure perl code in order to 
+mock checks like: -e, -f, -z, ...
+
+https://perldoc.perl.org/functions/-X.html
+
+    -r  File is readable by effective uid/gid.
+    -w  File is writable by effective uid/gid.
+    -x  File is executable by effective uid/gid.
+    -o  File is owned by effective uid.
+    -R  File is readable by real uid/gid.
+    -W  File is writable by real uid/gid.
+    -X  File is executable by real uid/gid.
+    -O  File is owned by real uid.
+    -e  File exists.
+    -z  File has zero size (is empty).
+    -s  File has nonzero size (returns size in bytes).
+    -f  File is a plain file.
+    -d  File is a directory.
+    -l  File is a symbolic link (false if symlinks aren't
+        supported by the file system).
+    -p  File is a named pipe (FIFO), or Filehandle is a pipe.
+    -S  File is a socket.
+    -b  File is a block special file.
+    -c  File is a character special file.
+    -t  Filehandle is opened to a tty.
+    -u  File has setuid bit set.
+    -g  File has setgid bit set.
+    -k  File has sticky bit set.
+    -T  File is an ASCII or UTF-8 text file (heuristic guess).
+    -B  File is a "binary" file (opposite of -T).
+    -M  Script start time minus file modification time, in days.
+    -A  Same for access time.
+    -C  Same for inode change time (Unix, may differ for other
+  platforms)
+
+
+=head1 Usage
+
+need some doc there... and more samples..
+
+=head1 Notice
+
+This is a very early development stage and some behavior might change before the release of a more stable build.
+
+
+=head1 LICENSE
+
+This software is copyright (c) 2018 by cPanel, Inc.
+
+This is free software; you can redistribute it and/or modify it under the same terms as the Perl 5 programming
+language system itself.
+
+
+=head1 DISCLAIMER OF WARRANTY
+
+BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY
+APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES PROVIDE THE
+SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE
+OF THE SOFTWARE IS WITH YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING,
+REPAIR, OR CORRECTION.
+
+IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY
+WHO MAY MODIFY AND/OR REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE TO YOU FOR DAMAGES,        
+INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE     
+SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR     
+THIRD PARTIES OR A FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS  
+BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+ 
