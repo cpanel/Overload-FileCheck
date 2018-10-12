@@ -58,6 +58,14 @@ my $_current_mocks = {};
 # sub import {
 # }
 
+sub import
+{
+    # do stuff there...
+
+    # callback the exporter logic
+    __PACKAGE__->export_to_level(1, @_);
+}
+
 sub mock_file_check {
     my ( $check, $sub ) = @_;
 
@@ -153,7 +161,7 @@ Overload::FileCheck - override/mock perl filecheck
 
   # mock all calls to -e and delegate to the function dash_e
   mock_file_check( '-e' => \&dash_e );
-
+  
   # example of your own callback function to mock -e
   # when returning
   #  0: the test is false

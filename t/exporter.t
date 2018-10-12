@@ -18,4 +18,12 @@ mock_file_check( 'e' => sub { 1 } );
 ok( -e $not_there, "-e 'not_there' missing file exists when mocked" );
 ok( !-f $not_there, "-f 'not_there' still false" );
 
+mock_file_check( f => sub { 1 } );
+ok( -e $not_there, "-e mocked => true" );
+ok( -f $not_there, "-f mocked => true" );
+
+unmock_all_file_checks();
+ok( !-e $not_there, "-e unmocked  => false" );
+ok( !-f $not_there, "-f unmocked => false" );
+
 done_testing;

@@ -19,7 +19,7 @@ version 0.001
 
     # mock all calls to -e and delegate to the function dash_e
     mock_file_check( '-e' => \&dash_e );
-
+    
     # example of your own callback function to mock -e
     # when returning
     #  0: the test is false
