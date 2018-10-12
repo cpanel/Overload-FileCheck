@@ -12,18 +12,42 @@ version 0.001
 
     # or
 
-    use Overload::FileCheck qw{mock unmock unmock_all};
+    use Overload::FileCheck qw{mock_file_check unmock_file_check unmock_all_file_checks};
 
-    # mock all calls to -e
-    mock( '-e' => sub { 1 } );
+    # all -f checks will be true from now
+    mock_file_check( '-f' => sub { 1 } );
+
+    # mock all calls to -e and delegate to the function dash_e
+    mock_file_check( '-e' => \&dash_e );
+
+    # example of your own callback function to mock -e
+    # when returning
+    #  0: the test is false
+    #  1: the test is true
+    # -1: you want to use the answer from Perl itself :-)
+
+    sub dash_e {
+          my ( $file_or_handle ) = @_;
+
+          # return true on -e for this specific file
+          return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
+
+          # claim that /tmp is not available even if it exists
+          return 0 if $file eq '/tmp';
+
+          # delegate the answer to the Perl CORE -e OP
+          #   as we do not want to control these files
+          return -1;
+      }
+
 
     # unmock -e and -f
-    unmock( '-e' );
-    unmock( '-f' );
-    unmock( qw{-e -f} );
+    unmock_file_check( '-e' );
+    unmock_file_check( '-f' );
+    unmock_file_check( qw{-e -f} );
 
     # or unmock all existing filecheck
-    nmock_all();
+    unmock_all_file_checks();
 
 # DESCRIPTION
 
@@ -79,19 +103,25 @@ at run time.
 
     use Overload::FileCheck '-e' => \&my_dash_e, -f => sub { 1 };
 
+    # example of your own callback function to mock -e
+    # when returning
+    #  0: the test is false
+    #  1: the test is true
+    # -1: you want to use the answer from Perl itself :-)
 
     sub dash_e {
-        my ( $file ) = @_;
+          my ( $file_or_handle ) = @_;
 
-        # return true on -e on non existant file
-        return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
+          # return true on -e for this specific file
+          return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
 
-        # claim that /tmp is not available
-        return 0 if $file eq '/tmp';
+          # claim that /tmp is not available even if it exists
+          return 0 if $file eq '/tmp';
 
-        # delegate the answer to the CORE -e, we do not control these files
-        return -1;
-    }
+          # delegate the answer to the Perl CORE -e OP
+          #   as we do not want to control these files
+          return -1;
+      }
 
 ## Mocking filecheck at run time
 
@@ -99,27 +129,34 @@ You can also get a similar behavior by declaring the overload later at run time.
 
     use Overload::FileCheck (); # no import
 
-    Overload::FileCheck::mock( '-e' => \&my_dash_e );
-    Overload::FileCheck::mock( '-f' => sub { 1 } );
+    Overload::FileCheck::mock_file_check( '-e' => \&my_dash_e );
+    Overload::FileCheck::mock_file_check( '-f' => sub { 1 } );
+
+    # example of your own callback function to mock -e
+    # when returning
+    #  0: the test is false
+    #  1: the test is true
+    # -1: you want to use the answer from Perl itself :-)
 
     sub dash_e {
-        my ( $file ) = @_;
+          my ( $file_or_handle ) = @_;
 
-        # return true on -e on non existant file
-        return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
+          # return true on -e for this specific file
+          return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
 
-        # claim that /tmp is not available
-        return 0 if $file eq '/tmp';
+          # claim that /tmp is not available even if it exists
+          return 0 if $file eq '/tmp';
 
-        # delegate the answer to the CORE -e, we do not control these files
-        return -1;
-    }
+          # delegate the answer to the Perl CORE -e OP
+          #   as we do not want to control these files
+          return -1;
+      }
 
 # Available functions
 
-## mock( $check, $CODE )
+## mock\_file\_check( $check, $CODE )
 
-mock function is used to mock one of the filecheck op.
+mock\_file\_check function is used to mock one of the filecheck op.
 
 The first argument is one of the file check: '-f', '-e', ... where the dash is optional.
 It also accepts 'e', 'f', ...
@@ -135,20 +172,22 @@ Otherwise returns 1 on success.
     # this is probably a very bad idea to do this in your codebase
     # but can be useful for some testing
     # in that sample all '-e' checks will always return true...
-    mock( '-e' => sub { 1 } )
+    mock_file_check( '-e' => sub { 1 } )
 
-## unmock( $check, \[@extra\_checks\] )
+## unmock\_file\_check( $check, \[@extra\_checks\] )
 
 Disable the effect of one or more specific mock.
+The argument to unmock\_file\_check can be a list or a single scalar value.
+The leading dash is optional.
 
-    unmock( '-e' );
-    unmock( 'e' );            # also work without the dash
-    unmock( qw{-e -f -z} );
-    unmock( qw{e f} );        # also work without the dashes
+    unmock_file_check( '-e' );
+    unmock_file_check( 'e' );            # also work without the dash
+    unmock_file_check( qw{-e -f -z} );
+    unmock_file_check( qw{e f} );        # also work without the dashes
 
-## unmock\_all()
+## unmock\_all\_file\_checks()
 
-By a simple call to unmock\_all, you would disable the effect of overriding the
+By a simple call to unmock\_all\_file\_checks, you would disable the effect of overriding the
 filecheck OPs. (not that the XS code is still plugged in, but fallback as soon
 as possible to the original OP)
 

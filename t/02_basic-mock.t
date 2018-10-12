@@ -22,7 +22,7 @@ my @calls;
 
 {
     note "we are mocking -e => 1";
-    Overload::FileCheck::mock( '-e' => sub {
+    Overload::FileCheck::mock_file_check( '-e' => sub {
         my $f = shift;
 
         note "mocked -e called....";
@@ -41,18 +41,18 @@ my @calls;
 
     like(
         dies {
-            Overload::FileCheck::mock( '-e' => sub {0} )
+            Overload::FileCheck::mock_file_check( '-e' => sub {0} )
         },
         qr/\Q-e is already mocked by Overload::FileCheck/,
         "die when mocking a second time"
     );
 
-    Overload::FileCheck::unmock('-e');
+    Overload::FileCheck::unmock_file_check('-e');
 
-    Overload::FileCheck::unmock(qw{-e -f});
+    Overload::FileCheck::unmock_file_check(qw{-e -f});
 
     note "we are mocking -e => 0";
-    Overload::FileCheck::mock( '-e' => sub {0} );
+    Overload::FileCheck::mock_file_check( '-e' => sub {0} );
 
     ok !-e q[/tmp], "/tmp does not exist now...";
 
