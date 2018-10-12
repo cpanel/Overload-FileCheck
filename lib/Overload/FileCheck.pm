@@ -5,10 +5,14 @@ use warnings;
 
 # ABSTRACT: override/mock perl file checks ops
 
-require XSLoader;
-XSLoader::load(__PACKAGE__);
+use XSLoader ();
+use Exporter ();
 
-# TODO: use exporter & update doc
+our @ISA         = qw(Exporter);
+our @EXPORT_OK   = qw(mock unmock unmock_all);
+our %EXPORT_TAGS = ( all => [@EXPORT_OK] );
+
+XSLoader::load(__PACKAGE__);
 
 # hash for every filecheck we can mock
 #   and their corresonding OP_TYPE
@@ -143,12 +147,18 @@ Overload::FileCheck - override/mock perl filecheck
 
   # or
 
-  use Overload::FileCheck ();
+  use Overload::FileCheck qw{mock unmock unmock_all};
 
-  Overload::FileCheck::mock( '-e' => sub { 1 } );
+  # mock all calls to -e
+  mock( '-e' => sub { 1 } );
 
-  Overload::FileCheck::unmock( qw{-e -f} );
-  Overload::FileCheck::unmock_all( qw{-e -f} );
+  # unmock -e and -f
+  unmock( '-e' );
+  unmock( '-f' );
+  unmock( qw{-e -f} );
+
+  # or unmock all existing filecheck
+  nmock_all();
 
 
 =head1 DESCRIPTION

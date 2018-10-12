@@ -12,12 +12,18 @@ version 0.001
 
     # or
 
-    use Overload::FileCheck ();
+    use Overload::FileCheck qw{mock unmock unmock_all};
 
-    Overload::FileCheck::mock( '-e' => sub { 1 } );
+    # mock all calls to -e
+    mock( '-e' => sub { 1 } );
 
-    Overload::FileCheck::unmock( qw{-e -f} );
-    Overload::FileCheck::unmock_all( qw{-e -f} );
+    # unmock -e and -f
+    unmock( '-e' );
+    unmock( '-f' );
+    unmock( qw{-e -f} );
+
+    # or unmock all existing filecheck
+    nmock_all();
 
 # DESCRIPTION
 
