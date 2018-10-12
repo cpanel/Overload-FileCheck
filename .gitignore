@@ -1,0 +1,14 @@
+Build
+MYMETA.json
+MYMETA.yml
+Makefile
+_build/
+blib/
+pm_to_blib
+FileCheck.bs
+FileCheck.c
+FileCheck.o
+.gdb_history
+Makefile.old
+MANIFEST.bak
+Overload-FileCheck-*
