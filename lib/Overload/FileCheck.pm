@@ -51,6 +51,8 @@ my %MAP_FC_OP = (
     'B' => OP_FTBINARY(),
 );
 
+my %REVERSE_MAP;
+
 # this is saving our custom ops
 # optype_id => sub
 my $_current_mocks = {};
@@ -58,12 +60,12 @@ my $_current_mocks = {};
 # sub import {
 # }
 
-sub import
-{
+sub import {
+
     # do stuff there...
 
     # callback the exporter logic
-    __PACKAGE__->export_to_level(1, @_);
+    __PACKAGE__->export_to_level( 1, @_ );
 }
 
 sub mock_file_check {
@@ -73,6 +75,7 @@ sub mock_file_check {
     die q[Second arg must be a CODE ref] unless ref $sub eq 'CODE';
 
     $check =~ s{^-+}{};    # strip any extra dashes
+                           #return -1 unless defined $MAP_FC_OP{$check}; # we should not do that
     die qq[Unknown check '$check'] unless defined $MAP_FC_OP{$check};
 
     my $optype = $MAP_FC_OP{$check};
@@ -105,7 +108,13 @@ sub unmock_file_check {
 
 sub unmock_all_file_checks {
 
-    my @mocks = sort keys %$_current_mocks;
+    if ( !scalar %REVERSE_MAP ) {
+        foreach my $k ( keys %MAP_FC_OP ) {
+            $REVERSE_MAP{ $MAP_FC_OP{$k} } = $k;
+        }
+    }
+
+    my @mocks = sort map { $REVERSE_MAP{$_} } keys %$_current_mocks;
     return unless scalar @mocks;
     unmock_file_check(@mocks);
 
