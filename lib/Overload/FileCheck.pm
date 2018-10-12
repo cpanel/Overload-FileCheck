@@ -6,16 +6,45 @@ use warnings;
 # ABSTRACT: override/mock perl file checks ops
 
 require XSLoader;
-XSLoader::load( __PACKAGE__ );
+XSLoader::load(__PACKAGE__);
 
 # TODO: use exporter & update doc
 
 # hash for every filecheck we can mock
 #   and their corresonding OP_TYPE
 my %MAP_FC_OP = (
-    'e' => Overload::FileCheck::OP_FTIS(),
-    'f' => Overload::FileCheck::OP_FTFILE(),
-    # ...
+    'R' => OP_FTRREAD(),
+    'W' => OP_FTRWRITE(),
+    'X' => OP_FTREXEC(),
+    'r' => OP_FTEREAD(),
+    'w' => OP_FTEWRITE(),
+    'x' => OP_FTEEXEC(),
+
+    'e' => OP_FTIS(),
+    's' => OP_FTSIZE(),
+    'M' => OP_FTMTIME(),
+    'C' => OP_FTCTIME(),
+    'A' => OP_FTATIME(),
+
+    'O' => OP_FTROWNED(),
+    'o' => OP_FTEOWNED(),
+    'z' => OP_FTZERO(),
+    'S' => OP_FTSOCK(),
+    'c' => OP_FTCHR(),
+    'b' => OP_FTBLK(),
+    'f' => OP_FTFILE(),
+    'd' => OP_FTDIR(),
+    'p' => OP_FTPIPE(),
+    'u' => OP_FTSUID(),
+    'g' => OP_FTSGID(),
+    'k' => OP_FTSVTX(),
+
+    'l' => OP_FTLINK(),
+
+    't' => OP_FTTTY(),
+
+    'T' => OP_FTTEXT(),
+    'B' => OP_FTBINARY(),
 );
 
 # this is saving our custom ops
@@ -23,7 +52,6 @@ my %MAP_FC_OP = (
 my $_current_mocks = {};
 
 sub import {
-
 
 }
 
@@ -33,7 +61,7 @@ sub mock {
     die q[Check is not defined] unless defined $check;
     die q[Second arg must be a CODE ref] unless ref $sub eq 'CODE';
 
-    $check =~ s{^-+}{}; # strip any extra dashes
+    $check =~ s{^-+}{};    # strip any extra dashes
     die qq[Unknown check '$check'] unless defined $MAP_FC_OP{$check};
 
     my $optype = $MAP_FC_OP{$check};
@@ -41,56 +69,56 @@ sub mock {
 
     $_current_mocks->{$optype} = $sub;
 
-    _mock_ftOP( $optype  ); # XS code
+    _xs_mock_op($optype);
 
     return 1;
 }
 
 sub unmock {
-  my ( @checks ) = @_;
+    my (@checks) = @_;
 
-  foreach my $check ( @checks ) {
-    die q[Check is not defined] unless defined $check;
-    $check =~ s{^-+}{}; # strip any extra dashes
-    die qq[Unknown check '$check'] unless defined $MAP_FC_OP{$check};
+    foreach my $check (@checks) {
+        die q[Check is not defined] unless defined $check;
+        $check =~ s{^-+}{};    # strip any extra dashes
+        die qq[Unknown check '$check'] unless defined $MAP_FC_OP{$check};
 
-    my $optype = $MAP_FC_OP{$check};
+        my $optype = $MAP_FC_OP{$check};
 
-    delete $_current_mocks->{$optype};
+        delete $_current_mocks->{$optype};
 
-    _unmock_ftOP( $optype ); # XS code
-  }
+        _xs_unmock_op($optype);
+    }
 
-  return;
+    return;
 }
 
 sub unmock_all {
 
-  my @mocks = sort keys %$_current_mocks;
-  return unless scalar @mocks;
-  unmock( @mocks );
+    my @mocks = sort keys %$_current_mocks;
+    return unless scalar @mocks;
+    unmock(@mocks);
 
-  return;
+    return;
 }
 
 sub _check {
-  my ( $optype, $file, @others ) = @_;
+    my ( $optype, $file, @others ) = @_;
 
-  die if scalar @others; # need to move this in a unit test
+    die if scalar @others;    # need to move this in a unit test
 
-  # we have no custom mock at this point
-  return -1 unless defined $_current_mocks->{$optype};
+    # we have no custom mock at this point
+    return -1 unless defined $_current_mocks->{$optype};
 
-  my $out = $_current_mocks->{$optype}->( $file );
+    my $out = $_current_mocks->{$optype}->($file);
 
-  return 0 unless $out;
-  return -1 if $out == -1;
-  return 1;
+    return 0 unless $out;
+    return -1 if $out == -1;
+    return 1;
 }
 
 # accessors for testing purpose mainly
 sub _get_filecheck_ops_map {
-  return { %MAP_FC_OP }; # return a copy
+    return {%MAP_FC_OP};    # return a copy
 }
 
 1;

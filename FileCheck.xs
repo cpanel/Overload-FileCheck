@@ -32,6 +32,8 @@
   gl_overload_ft->op[op_type].real_pp = PL_ppaddr[op_type]; \
   PL_ppaddr[op_type] = f;
 
+/* ----------- start there --------------- */
+
 OverloadFTOps  *gl_overload_ft = 0;
 
 int _overload_ft_ops() {
@@ -69,23 +71,53 @@ int _overload_ft_ops() {
   return check_status;
 }
 
-/* TODO maybe a meta macro for this one too... */
-PP(pp_overload_ftis) {
-  int check_status;
-
-  assert( gl_overload_ft );
-
-  /* not currently mocked */
-  RETURN_CALL_REAL_OP_IF_UNMOCK()
-
-  check_status = _overload_ft_ops();
-
-  if ( check_status == 1 ) FT_RETURNYES;
-  if ( check_status == 0 ) FT_RETURNNO;
-
-  /* fallback */
-  return CALL_REAL_OP();
+/* lazy macro to declare a custom OP */
+/* Note: can probably use the same for every OPs.. */
+#define DECLARE_FTOP(pp_name) PP(pp_name) { \
+  int check_status; \
+  assert( gl_overload_ft ); \
+  /* not currently mocked */ \
+  RETURN_CALL_REAL_OP_IF_UNMOCK() \
+  check_status = _overload_ft_ops(); \
+  if ( check_status == 1 ) FT_RETURNYES; \
+  if ( check_status == 0 ) FT_RETURNNO; \
+  /* fallback */ \
+  return CALL_REAL_OP(); \
 }
+
+/* setup all our custom OPs -
+* note: probably can only setup one generic function for all OPs...
+*/
+DECLARE_FTOP(pp_overload_ftis)
+DECLARE_FTOP(pp_overload_ftrread)
+DECLARE_FTOP(pp_overload_ftlink)
+DECLARE_FTOP(pp_overload_fttty)
+DECLARE_FTOP(pp_overload_fttext)
+DECLARE_FTOP(pp_overload_ftbinary)
+
+DECLARE_FTOP(pp_overload_ftrwrite)
+DECLARE_FTOP(pp_overload_ftrexec)
+DECLARE_FTOP(pp_overload_fteread)
+DECLARE_FTOP(pp_overload_ftewrite)
+DECLARE_FTOP(pp_overload_fteexec)
+
+DECLARE_FTOP(pp_overload_ftsize)
+DECLARE_FTOP(pp_overload_ftmtime)
+DECLARE_FTOP(pp_overload_ftctime)
+DECLARE_FTOP(pp_overload_ftatime)
+
+DECLARE_FTOP(pp_overload_ftrowned)
+DECLARE_FTOP(pp_overload_fteowned)
+DECLARE_FTOP(pp_overload_ftzero)
+DECLARE_FTOP(pp_overload_ftsock)
+DECLARE_FTOP(pp_overload_ftchr)
+DECLARE_FTOP(pp_overload_ftblk)
+DECLARE_FTOP(pp_overload_ftfile)
+DECLARE_FTOP(pp_overload_ftdir)
+DECLARE_FTOP(pp_overload_ftpipe)
+DECLARE_FTOP(pp_overload_ftsuid)
+DECLARE_FTOP(pp_overload_ftgid)
+DECLARE_FTOP(pp_overload_ftsvtx)
 
 /*
 *  extract from https://perldoc.perl.org/functions/-X.html
@@ -123,24 +155,32 @@ PP(pp_overload_ftis) {
 MODULE = Overload__FileCheck       PACKAGE = Overload::FileCheck
 
 SV*
-mock_op(self)
-     SV* self;
+mock_op(optype)
+     SV* optype;
  ALIAS:
-      Overload::FileCheck::_mock_ftOP               = 1
-      Overload::FileCheck::_unmock_ftOP             = 2
+      Overload::FileCheck::_xs_mock_op               = 1
+      Overload::FileCheck::_xs_unmock_op             = 2
  CODE:
  {
      /* mylogger = INT2PTR(MyLogger*, SvIV(SvRV(self))); */
-      int i = 0;
+      int opid = 0;
+
+      if ( ! SvIOK(optype) )
+        croak("first argument to _xs_mock_op / _xs_unmock_op must be one integer");
+
+      opid = SvIV( optype );
+      if ( !opid || opid < 0 || opid >= OP_MAX )
+          croak( "Invalid opid value %d", opid );
 
       switch (ix) {
-         case 1: /* _mock_ftOP */
-              gl_overload_ft->op[OP_FTIS].is_mocked = 1;
+         case 1: /* _xs_mock_op */
+              gl_overload_ft->op[opid].is_mocked = 1;
           break;
-         case 2: /* _unmock_ftOP */
-              gl_overload_ft->op[OP_FTIS].is_mocked = 0;
+         case 2: /* _xs_unmock_op */
+              gl_overload_ft->op[opid].is_mocked = 0;
           break;
           default:
+              croak("Unsupported function at index %d", ix);
               XSRETURN_EMPTY;
       }
 
@@ -160,9 +200,47 @@ if (!gl_overload_ft) {
 
      newCONSTSUB(stash, "_loaded", newSViv(1) );
 
-     /* copy the original OP then plug our own custom function */
-     INIT_FILECHECK_MOCK( "OP_FTIS",   OP_FTIS,   &Perl_pp_overload_ftis); /* -e */
-     INIT_FILECHECK_MOCK( "OP_FTFILE", OP_FTFILE, &Perl_pp_overload_ftis); /* -f FIXME */
+     /* copy the original OP then plug our own custom OP function */
+     /* view pp_sys.c for complete list */
+
+     /* PP(pp_ftrread) */
+     INIT_FILECHECK_MOCK( "OP_FTRREAD",   OP_FTRREAD,   &Perl_pp_overload_ftrread);   /* -R */
+     INIT_FILECHECK_MOCK( "OP_FTRWRITE",  OP_FTRWRITE,  &Perl_pp_overload_ftrwrite);  /* -W */
+     INIT_FILECHECK_MOCK( "OP_FTREXEC",   OP_FTREXEC,   &Perl_pp_overload_ftrexec);   /* -X */
+     INIT_FILECHECK_MOCK( "OP_FTEREAD",   OP_FTEREAD,   &Perl_pp_overload_fteread);   /* -r */
+     INIT_FILECHECK_MOCK( "OP_FTEWRITE",  OP_FTEWRITE,  &Perl_pp_overload_ftewrite);  /* -w */
+     INIT_FILECHECK_MOCK( "OP_FTEEXEC",   OP_FTEEXEC,   &Perl_pp_overload_fteexec);   /* -x */
+
+     /* PP(pp_ftis) */
+     INIT_FILECHECK_MOCK( "OP_FTIS",      OP_FTIS,      &Perl_pp_overload_ftis);      /* -e */
+     INIT_FILECHECK_MOCK( "OP_FTSIZE",    OP_FTSIZE,    &Perl_pp_overload_ftsize);    /* -s */
+     INIT_FILECHECK_MOCK( "OP_FTMTIME",   OP_FTMTIME,   &Perl_pp_overload_ftmtime);   /* -M */
+     INIT_FILECHECK_MOCK( "OP_FTCTIME",   OP_FTCTIME,   &Perl_pp_overload_ftctime);   /* -C */
+     INIT_FILECHECK_MOCK( "OP_FTATIME",   OP_FTATIME,   &Perl_pp_overload_ftatime);   /* -A */
+
+     /* PP(pp_ftrowned) */
+     INIT_FILECHECK_MOCK( "OP_FTROWNED",  OP_FTROWNED,  &Perl_pp_overload_ftrowned);  /* -O */
+     INIT_FILECHECK_MOCK( "OP_FTEOWNED",  OP_FTEOWNED,  &Perl_pp_overload_fteowned);  /* -o */
+     INIT_FILECHECK_MOCK( "OP_FTZERO",    OP_FTZERO,    &Perl_pp_overload_ftzero);    /* -z */
+     INIT_FILECHECK_MOCK( "OP_FTSOCK",    OP_FTSOCK,    &Perl_pp_overload_ftsock);    /* -S */
+     INIT_FILECHECK_MOCK( "OP_FTCHR",     OP_FTCHR,     &Perl_pp_overload_ftchr);     /* -c */
+     INIT_FILECHECK_MOCK( "OP_FTBLK",     OP_FTBLK,     &Perl_pp_overload_ftblk);     /* -b */
+     INIT_FILECHECK_MOCK( "OP_FTFILE",    OP_FTFILE,    &Perl_pp_overload_ftfile);    /* -f */
+     INIT_FILECHECK_MOCK( "OP_FTDIR",     OP_FTDIR,     &Perl_pp_overload_ftdir);     /* -d */
+     INIT_FILECHECK_MOCK( "OP_FTPIPE",    OP_FTPIPE,    &Perl_pp_overload_ftpipe);    /* -p */
+     INIT_FILECHECK_MOCK( "OP_FTSUID",    OP_FTSUID,    &Perl_pp_overload_ftsuid);    /* -u */
+     INIT_FILECHECK_MOCK( "OP_FTSGID",    OP_FTSGID,    &Perl_pp_overload_ftgid);     /* -g */
+     INIT_FILECHECK_MOCK( "OP_FTSVTX",    OP_FTSVTX,    &Perl_pp_overload_ftsvtx);    /* -k */
+
+     /* PP(pp_ftlink) */
+     INIT_FILECHECK_MOCK( "OP_FTLINK",    OP_FTLINK,    &Perl_pp_overload_ftlink);    /* -l */
+
+     /* PP(pp_fttty) */
+     INIT_FILECHECK_MOCK( "OP_FTTTY",     OP_FTTTY,     &Perl_pp_overload_fttty);     /* -t */
+
+    /* PP(pp_fttext) */
+     INIT_FILECHECK_MOCK( "OP_FTTEXT",    OP_FTTEXT,    &Perl_pp_overload_fttext);    /* -T */
+     INIT_FILECHECK_MOCK( "OP_FTBINARY",  OP_FTBINARY,  &Perl_pp_overload_ftbinary);  /* -B */
 
      1;
 }
