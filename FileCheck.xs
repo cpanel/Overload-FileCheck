@@ -85,6 +85,24 @@ int _overload_ft_ops() {
   return CALL_REAL_OP(); \
 }
 
+/* a generic OP to overload the FT OPs returning yes or no */
+PP(pp_overload_ft_yes_no) {
+  int check_status;
+
+  assert( gl_overload_ft );
+  
+  /* not currently mocked */
+  RETURN_CALL_REAL_OP_IF_UNMOCK()
+  check_status = _overload_ft_ops();
+  
+  if ( check_status == 1 ) FT_RETURNYES;
+  if ( check_status == 0 ) FT_RETURNNO;
+  
+  /* fallback */
+  return CALL_REAL_OP();
+}
+
+
 /* setup all our custom OPs -
 * note: probably can only setup one generic function for all OPs...
 */
