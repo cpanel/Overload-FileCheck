@@ -71,20 +71,6 @@ int _overload_ft_ops() {
   return check_status;
 }
 
-/* lazy macro to declare a custom OP */
-/* Note: can probably use the same for every OPs.. */
-#define DECLARE_FTOP(pp_name) PP(pp_name) { \
-  int check_status; \
-  assert( gl_overload_ft ); \
-  /* not currently mocked */ \
-  RETURN_CALL_REAL_OP_IF_UNMOCK() \
-  check_status = _overload_ft_ops(); \
-  if ( check_status == 1 ) FT_RETURNYES; \
-  if ( check_status == 0 ) FT_RETURNNO; \
-  /* fallback */ \
-  return CALL_REAL_OP(); \
-}
-
 /* a generic OP to overload the FT OPs returning yes or no */
 /* FIXME also need to handle undef */
 PP(pp_overload_ft_yes_no) {
@@ -103,41 +89,6 @@ PP(pp_overload_ft_yes_no) {
   /* fallback */
   return CALL_REAL_OP();
 }
-
-
-/* setup all our custom OPs -
-* note: probably can only setup one generic function for all OPs...
-*/
-DECLARE_FTOP(pp_overload_ftis)
-DECLARE_FTOP(pp_overload_ftrread)
-DECLARE_FTOP(pp_overload_ftlink)
-DECLARE_FTOP(pp_overload_fttty)
-DECLARE_FTOP(pp_overload_fttext)
-DECLARE_FTOP(pp_overload_ftbinary)
-
-DECLARE_FTOP(pp_overload_ftrwrite)
-DECLARE_FTOP(pp_overload_ftrexec)
-DECLARE_FTOP(pp_overload_fteread)
-DECLARE_FTOP(pp_overload_ftewrite)
-DECLARE_FTOP(pp_overload_fteexec)
-
-DECLARE_FTOP(pp_overload_ftsize)
-DECLARE_FTOP(pp_overload_ftmtime)
-DECLARE_FTOP(pp_overload_ftctime)
-DECLARE_FTOP(pp_overload_ftatime)
-
-DECLARE_FTOP(pp_overload_ftrowned)
-DECLARE_FTOP(pp_overload_fteowned)
-DECLARE_FTOP(pp_overload_ftzero)
-DECLARE_FTOP(pp_overload_ftsock)
-DECLARE_FTOP(pp_overload_ftchr)
-DECLARE_FTOP(pp_overload_ftblk)
-DECLARE_FTOP(pp_overload_ftfile)
-DECLARE_FTOP(pp_overload_ftdir)
-DECLARE_FTOP(pp_overload_ftpipe)
-DECLARE_FTOP(pp_overload_ftsuid)
-DECLARE_FTOP(pp_overload_ftgid)
-DECLARE_FTOP(pp_overload_ftsvtx)
 
 /*
 *  extract from https://perldoc.perl.org/functions/-X.html
