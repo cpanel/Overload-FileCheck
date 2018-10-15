@@ -58,11 +58,33 @@ my %REVERSE_MAP;
 my $_current_mocks = {};
 
 sub import {
+    my ( $class, @args ) = @_;
 
-    # do stuff there...
+    # mock on import...
+    my $_next_check;
+    my @for_exporter;
+    foreach my $check (@args) {
+        if ( !$_next_check && $check !~ qr{^-} && length($check) != 1 ) {
+
+            # this is a valid arg for exporter
+            push @for_exporter, $check;
+            next;
+        }
+        if ( !$_next_check ) {
+
+            # we found a key like '-e' in '-e => sub {} '
+            $_next_check = $check;
+        }
+        else {
+            # now this is the value
+            my $code = $check;
+            mock_file_check( $_next_check, $code );
+            undef $_next_check;
+        }
+    }
 
     # callback the exporter logic
-    __PACKAGE__->export_to_level( 1, @_ );
+    __PACKAGE__->export_to_level( 1, $class, @for_exporter );
 }
 
 sub mock_file_check {
@@ -156,9 +178,6 @@ Overload::FileCheck - override/mock perl filecheck
 
 =head1 SYNOPSIS
 
-  use Overload::FileCheck '-e' => \&my_dash_e;
-
-  # or
 
   use Overload::FileCheck qw{mock_file_check unmock_file_check unmock_all_file_checks};
 
@@ -198,6 +217,42 @@ Overload::FileCheck - override/mock perl filecheck
 
   # or unmock all existing filecheck
   unmock_all_file_checks();
+
+
+You can also mock the check functions at import time by providing a check test
+and a custom function
+
+
+    use Overload::FileCheck '-e' => \&my_dash_e;
+    # Mock one or more check
+    #use Overload::FileCheck '-e' => \&my_dash_e, '-f' => sub { 1 }, 'x' => sub { 0 };
+
+    my @exist = qw{cherry banana apple};
+    my @not_there = qw{chocolate and peanuts};
+
+    sub my_dash_e {
+        my $f = shift;
+
+        note "mocked -e called for", $f;
+
+        return 1 if grep { $_ eq $f } @exist;
+        return 0 if grep { $_ eq $f } @not_there;
+
+        # we have no idea about these files
+        return -1;
+    }
+
+    foreach my $f ( @exist ) {
+        ok( -e $f, "file '$f' exists");
+    }
+
+    foreach my $f ( @not_there ) {
+        ok( !-e $f, "file '$f' exists");
+    }
+
+    # this is using the fallback logic '-1'
+    ok -e $0, q[$0 is there];
+    ok -e $^X, q[$^X is there];
 
 
 =head1 DESCRIPTION

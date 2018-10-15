@@ -8,10 +8,6 @@ version 0.001
 
 # SYNOPSIS
 
-    use Overload::FileCheck '-e' => \&my_dash_e;
-
-    # or
-
     use Overload::FileCheck qw{mock_file_check unmock_file_check unmock_all_file_checks};
 
     # all -f checks will be true from now
@@ -19,7 +15,7 @@ version 0.001
 
     # mock all calls to -e and delegate to the function dash_e
     mock_file_check( '-e' => \&dash_e );
-    
+
     # example of your own callback function to mock -e
     # when returning
     #  0: the test is false
@@ -33,13 +29,15 @@ version 0.001
           return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
 
           # claim that /tmp is not available even if it exists
-          return 0 if $file eq '/tmp';
+          if ( $file eq '/tmp' ) {
+            $! = 2; # set errno to "No such file or directory"
+            return 0;
+          }
 
           # delegate the answer to the Perl CORE -e OP
           #   as we do not want to control these files
           return -1;
-      }
-
+    }
 
     # unmock -e and -f
     unmock_file_check( '-e' );
@@ -48,6 +46,40 @@ version 0.001
 
     # or unmock all existing filecheck
     unmock_all_file_checks();
+
+You can also mock the check functions at import time by providing a check test
+and a custom function
+
+    use Overload::FileCheck '-e' => \&my_dash_e;
+    # Mock one or more check
+    #use Overload::FileCheck '-e' => \&my_dash_e, '-f' => sub { 1 }, 'x' => sub { 0 };
+
+    my @exist = qw{cherry banana apple};
+    my @not_there = qw{chocolate and peanuts};
+
+    sub my_dash_e {
+        my $f = shift;
+
+        note "mocked -e called for", $f;
+
+        return 1 if grep { $_ eq $f } @exist;
+        return 0 if grep { $_ eq $f } @not_there;
+
+        # we have no idea about these files
+        return -1;
+    }
+
+    foreach my $f ( @exist ) {
+        ok( -e $f, "file '$f' exists");
+    }
+
+    foreach my $f ( @not_there ) {
+        ok( !-e $f, "file '$f' exists");
+    }
+
+    # this is using the fallback logic '-1'
+    ok -e $0, q[$0 is there];
+    ok -e $^X, q[$^X is there];
 
 # DESCRIPTION
 
