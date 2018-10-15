@@ -82,6 +82,8 @@ PP(pp_overload_ft_yes_no) {
   RETURN_CALL_REAL_OP_IF_UNMOCK()
   check_status = _overload_ft_ops();
   
+  /* SETERRNO(EEXIST,RMS_FEX); */ /* TODO */
+
   if ( check_status == 1 ) FT_RETURNYES;
   if ( check_status == 0 ) FT_RETURNNO;
   /* if ( check_status == -1 ) FT_RETURNUNDEF; */ /* TODO */
