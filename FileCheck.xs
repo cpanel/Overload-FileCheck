@@ -86,6 +86,7 @@ int _overload_ft_ops() {
 }
 
 /* a generic OP to overload the FT OPs returning yes or no */
+/* FIXME also need to handle undef */
 PP(pp_overload_ft_yes_no) {
   int check_status;
 
@@ -97,6 +98,7 @@ PP(pp_overload_ft_yes_no) {
   
   if ( check_status == 1 ) FT_RETURNYES;
   if ( check_status == 0 ) FT_RETURNNO;
+  /* if ( check_status == -1 ) FT_RETURNUNDEF; */ /* TODO */
   
   /* fallback */
   return CALL_REAL_OP();
@@ -221,44 +223,44 @@ if (!gl_overload_ft) {
      /* copy the original OP then plug our own custom OP function */
      /* view pp_sys.c for complete list */
 
-     /* PP(pp_ftrread) */
-     INIT_FILECHECK_MOCK( "OP_FTRREAD",   OP_FTRREAD,   &Perl_pp_overload_ftrread);   /* -R */
-     INIT_FILECHECK_MOCK( "OP_FTRWRITE",  OP_FTRWRITE,  &Perl_pp_overload_ftrwrite);  /* -W */
-     INIT_FILECHECK_MOCK( "OP_FTREXEC",   OP_FTREXEC,   &Perl_pp_overload_ftrexec);   /* -X */
-     INIT_FILECHECK_MOCK( "OP_FTEREAD",   OP_FTEREAD,   &Perl_pp_overload_fteread);   /* -r */
-     INIT_FILECHECK_MOCK( "OP_FTEWRITE",  OP_FTEWRITE,  &Perl_pp_overload_ftewrite);  /* -w */
-     INIT_FILECHECK_MOCK( "OP_FTEEXEC",   OP_FTEEXEC,   &Perl_pp_overload_fteexec);   /* -x */
+     /* PP(pp_ftrread) - yes/no/undef */
+     INIT_FILECHECK_MOCK( "OP_FTRREAD",   OP_FTRREAD,   &Perl_pp_overload_ft_yes_no);   /* -R */
+     INIT_FILECHECK_MOCK( "OP_FTRWRITE",  OP_FTRWRITE,  &Perl_pp_overload_ft_yes_no);   /* -W */
+     INIT_FILECHECK_MOCK( "OP_FTREXEC",   OP_FTREXEC,   &Perl_pp_overload_ft_yes_no);   /* -X */
+     INIT_FILECHECK_MOCK( "OP_FTEREAD",   OP_FTEREAD,   &Perl_pp_overload_ft_yes_no);   /* -r */
+     INIT_FILECHECK_MOCK( "OP_FTEWRITE",  OP_FTEWRITE,  &Perl_pp_overload_ft_yes_no);   /* -w */
+     INIT_FILECHECK_MOCK( "OP_FTEEXEC",   OP_FTEEXEC,   &Perl_pp_overload_ft_yes_no);   /* -x */
 
-     /* PP(pp_ftis) */
-     INIT_FILECHECK_MOCK( "OP_FTIS",      OP_FTIS,      &Perl_pp_overload_ftis);      /* -e */
-     INIT_FILECHECK_MOCK( "OP_FTSIZE",    OP_FTSIZE,    &Perl_pp_overload_ftsize);    /* -s */
-     INIT_FILECHECK_MOCK( "OP_FTMTIME",   OP_FTMTIME,   &Perl_pp_overload_ftmtime);   /* -M */
-     INIT_FILECHECK_MOCK( "OP_FTCTIME",   OP_FTCTIME,   &Perl_pp_overload_ftctime);   /* -C */
-     INIT_FILECHECK_MOCK( "OP_FTATIME",   OP_FTATIME,   &Perl_pp_overload_ftatime);   /* -A */
+     /* PP(pp_ftis) - yes/undef/true/false */
+     INIT_FILECHECK_MOCK( "OP_FTIS",      OP_FTIS,      &Perl_pp_overload_ft_yes_no);   /* -e */
+     INIT_FILECHECK_MOCK( "OP_FTSIZE",    OP_FTSIZE,    &Perl_pp_overload_ft_yes_no);   /* -s */
+     INIT_FILECHECK_MOCK( "OP_FTMTIME",   OP_FTMTIME,   &Perl_pp_overload_ft_yes_no);   /* -M */
+     INIT_FILECHECK_MOCK( "OP_FTCTIME",   OP_FTCTIME,   &Perl_pp_overload_ft_yes_no);   /* -C */
+     INIT_FILECHECK_MOCK( "OP_FTATIME",   OP_FTATIME,   &Perl_pp_overload_ft_yes_no);   /* -A */
 
-     /* PP(pp_ftrowned) */
-     INIT_FILECHECK_MOCK( "OP_FTROWNED",  OP_FTROWNED,  &Perl_pp_overload_ftrowned);  /* -O */
-     INIT_FILECHECK_MOCK( "OP_FTEOWNED",  OP_FTEOWNED,  &Perl_pp_overload_fteowned);  /* -o */
-     INIT_FILECHECK_MOCK( "OP_FTZERO",    OP_FTZERO,    &Perl_pp_overload_ftzero);    /* -z */
-     INIT_FILECHECK_MOCK( "OP_FTSOCK",    OP_FTSOCK,    &Perl_pp_overload_ftsock);    /* -S */
-     INIT_FILECHECK_MOCK( "OP_FTCHR",     OP_FTCHR,     &Perl_pp_overload_ftchr);     /* -c */
-     INIT_FILECHECK_MOCK( "OP_FTBLK",     OP_FTBLK,     &Perl_pp_overload_ftblk);     /* -b */
-     INIT_FILECHECK_MOCK( "OP_FTFILE",    OP_FTFILE,    &Perl_pp_overload_ftfile);    /* -f */
-     INIT_FILECHECK_MOCK( "OP_FTDIR",     OP_FTDIR,     &Perl_pp_overload_ftdir);     /* -d */
-     INIT_FILECHECK_MOCK( "OP_FTPIPE",    OP_FTPIPE,    &Perl_pp_overload_ftpipe);    /* -p */
-     INIT_FILECHECK_MOCK( "OP_FTSUID",    OP_FTSUID,    &Perl_pp_overload_ftsuid);    /* -u */
-     INIT_FILECHECK_MOCK( "OP_FTSGID",    OP_FTSGID,    &Perl_pp_overload_ftgid);     /* -g */
-     INIT_FILECHECK_MOCK( "OP_FTSVTX",    OP_FTSVTX,    &Perl_pp_overload_ftsvtx);    /* -k */
+     /* PP(pp_ftrowned) yes/no/undef */
+     INIT_FILECHECK_MOCK( "OP_FTROWNED",  OP_FTROWNED,  &Perl_pp_overload_ft_yes_no);   /* -O */
+     INIT_FILECHECK_MOCK( "OP_FTEOWNED",  OP_FTEOWNED,  &Perl_pp_overload_ft_yes_no);   /* -o */
+     INIT_FILECHECK_MOCK( "OP_FTZERO",    OP_FTZERO,    &Perl_pp_overload_ft_yes_no);   /* -z */
+     INIT_FILECHECK_MOCK( "OP_FTSOCK",    OP_FTSOCK,    &Perl_pp_overload_ft_yes_no);   /* -S */
+     INIT_FILECHECK_MOCK( "OP_FTCHR",     OP_FTCHR,     &Perl_pp_overload_ft_yes_no);   /* -c */
+     INIT_FILECHECK_MOCK( "OP_FTBLK",     OP_FTBLK,     &Perl_pp_overload_ft_yes_no);   /* -b */
+     INIT_FILECHECK_MOCK( "OP_FTFILE",    OP_FTFILE,    &Perl_pp_overload_ft_yes_no);   /* -f */
+     INIT_FILECHECK_MOCK( "OP_FTDIR",     OP_FTDIR,     &Perl_pp_overload_ft_yes_no);   /* -d */
+     INIT_FILECHECK_MOCK( "OP_FTPIPE",    OP_FTPIPE,    &Perl_pp_overload_ft_yes_no);   /* -p */
+     INIT_FILECHECK_MOCK( "OP_FTSUID",    OP_FTSUID,    &Perl_pp_overload_ft_yes_no);   /* -u */
+     INIT_FILECHECK_MOCK( "OP_FTSGID",    OP_FTSGID,    &Perl_pp_overload_ft_yes_no);   /* -g */
+     INIT_FILECHECK_MOCK( "OP_FTSVTX",    OP_FTSVTX,    &Perl_pp_overload_ft_yes_no);   /* -k */
 
-     /* PP(pp_ftlink) */
-     INIT_FILECHECK_MOCK( "OP_FTLINK",    OP_FTLINK,    &Perl_pp_overload_ftlink);    /* -l */
+     /* PP(pp_ftlink) - yes/no/undef */
+     INIT_FILECHECK_MOCK( "OP_FTLINK",    OP_FTLINK,    &Perl_pp_overload_ft_yes_no);   /* -l */
 
-     /* PP(pp_fttty) */
-     INIT_FILECHECK_MOCK( "OP_FTTTY",     OP_FTTTY,     &Perl_pp_overload_fttty);     /* -t */
+     /* PP(pp_fttty) - yes/no/undef */
+     INIT_FILECHECK_MOCK( "OP_FTTTY",     OP_FTTTY,     &Perl_pp_overload_ft_yes_no);   /* -t */
 
-    /* PP(pp_fttext) */
-     INIT_FILECHECK_MOCK( "OP_FTTEXT",    OP_FTTEXT,    &Perl_pp_overload_fttext);    /* -T */
-     INIT_FILECHECK_MOCK( "OP_FTBINARY",  OP_FTBINARY,  &Perl_pp_overload_ftbinary);  /* -B */
+    /* PP(pp_fttext) - yes/no/undef */
+     INIT_FILECHECK_MOCK( "OP_FTTEXT",    OP_FTTEXT,    &Perl_pp_overload_ft_yes_no);   /* -T */
+     INIT_FILECHECK_MOCK( "OP_FTBINARY",  OP_FTBINARY,  &Perl_pp_overload_ft_yes_no);   /* -B */
 
      1;
 }
