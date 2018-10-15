@@ -167,7 +167,7 @@ Overload::FileCheck - override/mock perl filecheck
 
   # mock all calls to -e and delegate to the function dash_e
   mock_file_check( '-e' => \&dash_e );
-  
+
   # example of your own callback function to mock -e
   # when returning
   #  0: the test is false
@@ -181,13 +181,15 @@ Overload::FileCheck - override/mock perl filecheck
         return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
 
         # claim that /tmp is not available even if it exists
-        return 0 if $file eq '/tmp';
+        if ( $file eq '/tmp' ) {
+          $! = 2; # set errno to "No such file or directory"
+          return 0;
+        }
 
         # delegate the answer to the Perl CORE -e OP
         #   as we do not want to control these files
         return -1;
-    }
-
+  }
 
   # unmock -e and -f
   unmock_file_check( '-e' );
