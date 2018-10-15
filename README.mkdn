@@ -9,6 +9,7 @@ version 0.001
 # SYNOPSIS
 
     use Overload::FileCheck qw{mock_file_check unmock_file_check unmock_all_file_checks};
+    use Errno ();
 
     # all -f checks will be true from now
     mock_file_check( '-f' => sub { 1 } );
@@ -30,7 +31,9 @@ version 0.001
 
           # claim that /tmp is not available even if it exists
           if ( $file eq '/tmp' ) {
-            $! = 2; # set errno to "No such file or directory"
+            # you can set Errno to any custom value
+            #   or it would be set to Errno::ENOENT() by default
+            $! = Errno::ENOENT(); # set errno to "No such file or directory"
             return 0;
           }
 

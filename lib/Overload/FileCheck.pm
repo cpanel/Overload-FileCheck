@@ -7,6 +7,7 @@ use warnings;
 
 use XSLoader ();
 use Exporter ();
+use Errno    ();
 
 our @ISA         = qw(Exporter);
 our @EXPORT_OK   = qw(mock_file_check unmock_file_check unmock_all_file_checks);
@@ -51,7 +52,21 @@ my %MAP_FC_OP = (
     'B' => OP_FTBINARY(),
 );
 
+# op_type_id => check
 my %REVERSE_MAP;
+
+#
+# This is listing the default ERRNO codes
+#   used by each test when the test fails and
+#   the user did not provide one ERRNO error
+#
+my %DEFAULT_ERRNO = (
+    'default' => Errno::ENOENT(),    # default value for any other not listed
+    'x'       => Errno::ENOEXEC(),
+    'X'       => Errno::ENOEXEC(),
+
+    # ...
+);
 
 # this is saving our custom ops
 # optype_id => sub
@@ -150,7 +165,19 @@ sub _check {
 
     my $out = $_current_mocks->{$optype}->($file);
 
-    return 0 unless $out;
+    if ( !$out ) {
+
+        # check if the user provided a custom ERRNO error otherwise
+        #   set one for him, so a test could never fail without having
+        #   ERRNO set
+        if ( !int($!) ) {
+            $! = $DEFAULT_ERRNO{ $REVERSE_MAP{$optype} || 'default' } || $DEFAULT_ERRNO{'default'};
+        }
+
+        #return undef unless defined $out;
+        return 0;
+    }
+
     return -1 if $out == -1;
     return 1;
 }
@@ -180,6 +207,7 @@ Overload::FileCheck - override/mock perl filecheck
 
 
   use Overload::FileCheck qw{mock_file_check unmock_file_check unmock_all_file_checks};
+  use Errno ();
 
   # all -f checks will be true from now
   mock_file_check( '-f' => sub { 1 } );
@@ -201,7 +229,9 @@ Overload::FileCheck - override/mock perl filecheck
 
         # claim that /tmp is not available even if it exists
         if ( $file eq '/tmp' ) {
-          $! = 2; # set errno to "No such file or directory"
+          # you can set Errno to any custom value
+          #   or it would be set to Errno::ENOENT() by default
+          $! = Errno::ENOENT(); # set errno to "No such file or directory"
           return 0;
         }
 
