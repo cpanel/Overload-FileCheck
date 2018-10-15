@@ -10,7 +10,7 @@ use Exporter ();
 use Errno    ();
 
 our @ISA         = qw(Exporter);
-our @EXPORT_OK   = qw(mock_file_check unmock_file_check unmock_all_file_checks);
+our @EXPORT_OK   = qw(mock_all_file_checks mock_file_check unmock_file_check unmock_all_file_checks);
 our %EXPORT_TAGS = ( all => [@EXPORT_OK] );
 
 XSLoader::load(__PACKAGE__);
@@ -102,6 +102,22 @@ sub import {
     __PACKAGE__->export_to_level( 1, $class, @for_exporter );
 }
 
+sub mock_all_file_checks {
+    my ($sub) = @_;
+
+    foreach my $check ( sort keys %MAP_FC_OP ) {
+        mock_file_check(
+            $check,
+            sub {
+                my (@args) = @_;
+                return $sub->( $check, @args );
+            }
+        );
+    }
+
+    return 1;
+}
+
 sub mock_file_check {
     my ( $check, $sub ) = @_;
 
@@ -137,7 +153,7 @@ sub unmock_file_check {
         _xs_unmock_op($optype);
     }
 
-    return;
+    return 1;
 }
 
 sub unmock_all_file_checks {
@@ -150,9 +166,8 @@ sub unmock_all_file_checks {
 
     my @mocks = sort map { $REVERSE_MAP{$_} } keys %$_current_mocks;
     return unless scalar @mocks;
-    unmock_file_check(@mocks);
 
-    return;
+    return unmock_file_check(@mocks);
 }
 
 sub _check {
@@ -204,6 +219,47 @@ Overload::FileCheck - override/mock perl filecheck
 =end HTML
 
 =head1 SYNOPSIS
+
+You can mock all file checks using mock_all_file_checks
+
+
+  use Test::More;
+  use Overload::FileCheck qw{mock_all_file_checks unmock_all_file_checks};
+
+  my @exist     = qw{cherry banana apple};
+  my @not_there = qw{not-there missing-file};
+
+  mock_all_file_checks( \&my_custom_check );
+
+  sub my_custom_check {
+      my ( $check, $f ) = @_;
+
+      if ( $check eq 'e' || $check eq 'f' ) {
+          return 1 if grep { $_ eq $f } @exist;
+          return 0 if grep { $_ eq $f } @not_there;
+      }
+
+      return 0 if $check eq 'd' && grep { $_ eq $f } @exist;
+
+      # fallback to the original Perl OP
+      return -1;
+  }
+
+  foreach my $f (@exist) {
+      ok( -e $f,  "-e $f is true" );
+      ok( -f $f,  "-f $f is true" );
+      ok( !-d $f, "-d $f is false" );
+  }
+
+  foreach my $f (@not_there) {
+      ok( !-e $f, "-e $f is false" );
+      ok( !-f $f, "-f $f is false" );
+  }
+
+  done_testing;
+
+
+You can also mock a single file check type like '-e', '-f', ...
 
 
   use Overload::FileCheck qw{mock_file_check unmock_file_check unmock_all_file_checks};
