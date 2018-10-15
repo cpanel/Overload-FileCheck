@@ -57,9 +57,6 @@ my %REVERSE_MAP;
 # optype_id => sub
 my $_current_mocks = {};
 
-# sub import {
-# }
-
 sub import {
 
     # do stuff there...

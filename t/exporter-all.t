@@ -6,7 +6,7 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck qw{mock_file_check unmock_file_check unmock_all_file_checks};
+use Overload::FileCheck q{:all};
 
 my $not_there = q{/should/not/be/there}; # improve
 
