@@ -1,6 +1,8 @@
 /*  You may distribute under the terms of either the GNU General Public License
  *  or the Artistic License (the same terms as Perl itself)
  *
+ * This software is copyright (c) 2018 by cPanel, Inc.
+ *
  * copyright@cpanel.net                                         http://cpanel.net
  *
  */
@@ -77,17 +79,17 @@ PP(pp_overload_ft_yes_no) {
   int check_status;
 
   assert( gl_overload_ft );
-  
+
   /* not currently mocked */
   RETURN_CALL_REAL_OP_IF_UNMOCK()
   check_status = _overload_ft_ops();
-  
+
   /* SETERRNO(EEXIST,RMS_FEX); */ /* TODO */
 
   if ( check_status == 1 ) FT_RETURNYES;
   if ( check_status == 0 ) FT_RETURNNO;
   /* if ( check_status == -1 ) FT_RETURNUNDEF; */ /* TODO */
-  
+
   /* fallback */
   return CALL_REAL_OP();
 }
