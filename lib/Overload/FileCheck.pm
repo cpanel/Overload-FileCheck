@@ -163,6 +163,26 @@ sub unmock_file_check {
     return 1;
 }
 
+# this is a special case used to mock OP_STAT & OP_LSTAT
+sub mock_stat {
+    my ($sub) = @_;
+
+    die q[First arg must be a CODE ref] unless ref $sub eq 'CODE';
+
+    foreach my $opname (qw{stat lstat}) {
+        my $optype = $MAP_FC_OP{$opname};
+        die qq[No optype found for $opname] unless $optype;
+
+        # plug the sub
+        $_current_mocks->{$optype} = $sub;
+
+        # setup the mock for the OP
+        _xs_mock_op($optype);
+    }
+
+    return 1;
+}
+
 sub unmock_all_file_checks {
 
     if ( !scalar %REVERSE_MAP ) {

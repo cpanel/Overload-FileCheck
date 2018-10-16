@@ -116,18 +116,78 @@ PP(pp_overload_ft_int) {
 }
 
 PP(pp_overload_stat) { /* stat & lstat */
-  int check_status;
+  int check_status = 0;
 
   assert( gl_overload_ft );
 
   /* not currently mocked */
-  RETURN_CALL_REAL_OP_IF_UNMOCK()
-  check_status = _overload_ft_ops();
+  RETURN_CALL_REAL_OP_IF_UNMOCK();
 
-  /* ... FIXME ... */
 
-  /* fallback */
-  return CALL_REAL_OP();
+  {   /* return earlier if the arg is PL_defgv as we can use cache from the previous call */
+      SV *const arg = *PL_stack_sp;
+      GV *gv =  MAYBE_DEREF_GV(arg); /* incomplete but should do most of the work */
+      //printf ("### arg %d %p vs GV %p vs defgv %p \n", SvFLAGS(arg), *PL_stack_sp, gv, PL_defgv );
+      /* get the GV from the arg if it s not a GV */
+      if ( SvTYPE(arg) == SVt_NULL || gv == PL_defgv ) {
+          return CALL_REAL_OP();
+      }
+  }
+
+  check_status = _overload_ft_ops(); /* FIXME handle ARRAY */
+
+  /* explicit ask for fallback */
+  if ( check_status == -1 )
+    return CALL_REAL_OP();
+
+  /*
+  * one lazy solution could be to do a backup of
+  *
+  *   - PL_laststype
+  *   - PL_statcache
+  *   - PL_laststatval
+  *   - PL_statname
+  *
+  *
+  *   set our values then call the real OP with them and restore the original ones
+  *
+  *   maybe need to tweak to force to use the PL_* cached values
+  */
+
+
+  {
+      dSP;
+
+      /* drop & replace our stack first element */
+      SV *previous_stack = sv_2mortal(POPs); /* what do we want to do with this ? */
+      PUSHs( MUTABLE_SV( PL_defgv ) );
+
+
+      PL_statcache.st_ino     = 0;
+      PL_statcache.st_mode    = 4;
+      PL_statcache.st_nlink   = 3;
+      PL_statcache.st_uid     = 2;
+      PL_statcache.st_gid     = 1;
+      PL_statcache.st_rdev    = 42;
+      PL_statcache.st_size    = 10001; /* fake size */
+      PL_statcache.st_atime   = 1000;
+      PL_statcache.st_mtime   = 2000;
+      PL_statcache.st_ctime   = 3000;
+      PL_statcache.st_blksize = 0;
+      PL_statcache.st_blocks  = 0;
+
+      PL_laststatval = 0;               /* it succeeds */
+      PL_laststype   = PL_op->op_type;  /* this was for our OP */
+
+      if ( previous_stack && SvPOK(previous_stack) )
+        sv_setpv(PL_statname, SvPV_nolen(previous_stack) ); /* need a reach char / SV use the SvPV  */
+
+
+      // printf ("######## Calling STAT from XS ?? The result is %d /// OPTYPE is %d\n", check_status, PL_op->op_type);
+
+    return CALL_REAL_OP();
+  }
+
 }
 
 /*

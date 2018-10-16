@@ -24,8 +24,11 @@ typedef struct {
 
 /* function prototypes */
 
-/* TODO move somewhere else... */
+/* TODO maybe move somewhere else... */
+
+/******************************************************************************/
 /*** helpers stolen from pp_sys.c ****/
+/******************************************************************************/
 
 /* If the next filetest is stacked up with this one
    (PL_op->op_private & OPpFT_STACKING), we leave
@@ -68,5 +71,51 @@ S_ft_return_true(pTHX_ SV *ret) {
 #define FT_RETURNYES    return S_ft_return_true(aTHX_ &PL_sv_yes)
 
 /*** end of helpers from pp_sys.c ****/
+
+/******************************************************************************/
+/*** helpers stolen from pp.h ****/
+/******************************************************************************/
+
+#  define MAYBE_DEREF_GV_flags(sv,phlags)                          \
+    (                                                               \
+        (void)(phlags & SV_GMAGIC && (SvGETMAGIC(sv),0)),            \
+        isGV_with_GP(sv)                                              \
+          ? (GV *)(sv)                                                \
+          : SvROK(sv) && SvTYPE(SvRV(sv)) <= SVt_PVLV &&               \
+            (SvGETMAGIC(SvRV(sv)), isGV_with_GP(SvRV(sv)))              \
+             ? (GV *)SvRV(sv)                                            \
+             : NULL                                                       \
+    )
+#  define MAYBE_DEREF_GV(sv)      MAYBE_DEREF_GV_flags(sv,SV_GMAGIC)
+
+/*** end of helpers from pp.h ****/
+
+/******************************************************************************/
+/*** helpers stolen from handy.h ***/
+/******************************************************************************/
+
+#  if Uid_t_size > IVSIZE
+#    define sv_setuid(sv, uid)       sv_setnv((sv), (NV)(uid))
+#    define SvUID(sv)                SvNV(sv)
+#  elif Uid_t_sign <= 0
+#    define sv_setuid(sv, uid)       sv_setiv((sv), (IV)(uid))
+#    define SvUID(sv)                SvIV(sv)
+#  else
+#    define sv_setuid(sv, uid)       sv_setuv((sv), (UV)(uid))
+#    define SvUID(sv)                SvUV(sv)
+#  endif /* Uid_t_size */
+
+#  if Gid_t_size > IVSIZE
+#    define sv_setgid(sv, gid)       sv_setnv((sv), (NV)(gid))
+#    define SvGID(sv)                SvNV(sv)
+#  elif Gid_t_sign <= 0
+#    define sv_setgid(sv, gid)       sv_setiv((sv), (IV)(gid))
+#    define SvGID(sv)                SvIV(sv)
+#  else
+#    define sv_setgid(sv, gid)       sv_setuv((sv), (UV)(gid))
+#    define SvGID(sv)                SvUV(sv)
+#  endif /* Gid_t_size */
+
+/*** end of helpers from handy.h ****/
 
 #endif /* XS_FILE_CHECK_H */
