@@ -32,6 +32,7 @@ sub my_custom_check {
 my $ALL_CHECKS = Overload::FileCheck::_get_filecheck_ops_map();
 
 foreach my $c ( sort keys %$ALL_CHECKS ) {
+    next if $c =~ qr{^l?stat$};    # do not bother with these they are not file checks
 
     my $do_check = sub {
         my ($input) = @_;

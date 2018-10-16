@@ -115,6 +115,21 @@ PP(pp_overload_ft_int) {
   }
 }
 
+PP(pp_overload_stat) { /* stat & lstat */
+  int check_status;
+
+  assert( gl_overload_ft );
+
+  /* not currently mocked */
+  RETURN_CALL_REAL_OP_IF_UNMOCK()
+  check_status = _overload_ft_ops();
+
+  /* ... FIXME ... */
+
+  /* fallback */
+  return CALL_REAL_OP();
+}
+
 /*
 *  extract from https://perldoc.perl.org/functions/-X.html
 *
@@ -237,6 +252,10 @@ if (!gl_overload_ft) {
     /* PP(pp_fttext) - yes/no/undef */
      INIT_FILECHECK_MOCK( "OP_FTTEXT",    OP_FTTEXT,    &Perl_pp_overload_ft_yes_no);   /* -T */
      INIT_FILECHECK_MOCK( "OP_FTBINARY",  OP_FTBINARY,  &Perl_pp_overload_ft_yes_no);   /* -B */
+
+     /* PP(pp_stat) also used for: pp_lstat() */
+     INIT_FILECHECK_MOCK( "OP_STAT",      OP_STAT,      &Perl_pp_overload_stat);        /* stat */
+     INIT_FILECHECK_MOCK( "OP_LSTAT",     OP_LSTAT,     &Perl_pp_overload_stat);        /* lstat */
 
      1;
 }

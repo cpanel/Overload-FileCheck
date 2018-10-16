@@ -26,10 +26,10 @@ my %MAP_FC_OP = (
     'x' => OP_FTEEXEC(),
 
     'e' => OP_FTIS(),
-    's' => OP_FTSIZE(),
-    'M' => OP_FTMTIME(),
-    'C' => OP_FTCTIME(),
-    'A' => OP_FTATIME(),
+    's' => OP_FTSIZE(),     # OP_CAN_RETURN_INT
+    'M' => OP_FTMTIME(),    # OP_CAN_RETURN_INT
+    'C' => OP_FTCTIME(),    # OP_CAN_RETURN_INT
+    'A' => OP_FTATIME(),    # OP_CAN_RETURN_INT
 
     'O' => OP_FTROWNED(),
     'o' => OP_FTEOWNED(),
@@ -50,6 +50,11 @@ my %MAP_FC_OP = (
 
     'T' => OP_FTTEXT(),
     'B' => OP_FTBINARY(),
+
+    # special cases for stat & lstat
+    'stat'  => OP_STAT(),
+    'lstat' => OP_LSTAT(),
+
 );
 
 # op_type_id => check
