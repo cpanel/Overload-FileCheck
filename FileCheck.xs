@@ -94,6 +94,27 @@ PP(pp_overload_ft_yes_no) {
   return CALL_REAL_OP();
 }
 
+PP(pp_overload_ft_int) {
+  int check_status;
+
+  assert( gl_overload_ft );
+
+  /* not currently mocked */
+  RETURN_CALL_REAL_OP_IF_UNMOCK()
+  check_status = _overload_ft_ops();
+
+  /* SETERRNO(EEXIST,RMS_FEX); */ /* TODO */
+  if ( check_status == -1 )
+    return CALL_REAL_OP();
+
+  {
+    dTARGET;
+    /* TODO this is over simplistic some OPs can return one NV instead of IV */
+    sv_setiv(TARG, (IV) check_status);
+    return S_ft_return_true(aTHX_ TARG);
+  }
+}
+
 /*
 *  extract from https://perldoc.perl.org/functions/-X.html
 *
@@ -188,10 +209,10 @@ if (!gl_overload_ft) {
 
      /* PP(pp_ftis) - yes/undef/true/false */
      INIT_FILECHECK_MOCK( "OP_FTIS",      OP_FTIS,      &Perl_pp_overload_ft_yes_no);   /* -e */
-     INIT_FILECHECK_MOCK( "OP_FTSIZE",    OP_FTSIZE,    &Perl_pp_overload_ft_yes_no);   /* -s */
-     INIT_FILECHECK_MOCK( "OP_FTMTIME",   OP_FTMTIME,   &Perl_pp_overload_ft_yes_no);   /* -M */
-     INIT_FILECHECK_MOCK( "OP_FTCTIME",   OP_FTCTIME,   &Perl_pp_overload_ft_yes_no);   /* -C */
-     INIT_FILECHECK_MOCK( "OP_FTATIME",   OP_FTATIME,   &Perl_pp_overload_ft_yes_no);   /* -A */
+     INIT_FILECHECK_MOCK( "OP_FTSIZE",    OP_FTSIZE,    &Perl_pp_overload_ft_int);   /* -s */
+     INIT_FILECHECK_MOCK( "OP_FTMTIME",   OP_FTMTIME,   &Perl_pp_overload_ft_int);   /* -M */
+     INIT_FILECHECK_MOCK( "OP_FTCTIME",   OP_FTCTIME,   &Perl_pp_overload_ft_int);   /* -C */
+     INIT_FILECHECK_MOCK( "OP_FTATIME",   OP_FTATIME,   &Perl_pp_overload_ft_int);   /* -A */
 
      /* PP(pp_ftrowned) yes/no/undef */
      INIT_FILECHECK_MOCK( "OP_FTROWNED",  OP_FTROWNED,  &Perl_pp_overload_ft_yes_no);   /* -O */

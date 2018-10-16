@@ -55,6 +55,8 @@ my %MAP_FC_OP = (
 # op_type_id => check
 my %REVERSE_MAP;
 
+my %OP_CAN_RETURN_INT = map { $MAP_FC_OP{$_} => 1 } qw{ s M C A };
+
 #
 # This is listing the default ERRNO codes
 #   used by each test when the test fails and
@@ -180,6 +182,8 @@ sub _check {
 
     my $out = $_current_mocks->{$optype}->($file);
 
+    # FIXME return undef when not defined out
+
     if ( !$out ) {
 
         # check if the user provided a custom ERRNO error otherwise
@@ -194,12 +198,17 @@ sub _check {
     }
 
     return -1 if $out == -1;
+
+    if ( $OP_CAN_RETURN_INT{$optype} ) {
+        return int($out);    # limitation to int for now
+    }
+
     return 1;
 }
 
 # accessors for testing purpose mainly
 sub _get_filecheck_ops_map {
-    return {%MAP_FC_OP};    # return a copy
+    return {%MAP_FC_OP};     # return a copy
 }
 
 1;
