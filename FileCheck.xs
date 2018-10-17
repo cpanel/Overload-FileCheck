@@ -34,6 +34,9 @@
   gl_overload_ft->op[op_type].real_pp = PL_ppaddr[op_type]; \
   PL_ppaddr[op_type] = f;
 
+/* a Stat_t struct has 13 elements */
+#define STAT_T_MAX 13
+
 /* ----------- start there --------------- */
 
 OverloadFTOps  *gl_overload_ft = 0;
@@ -142,10 +145,10 @@ int _overload_ft_stat(Stat_t *stat) {
     if ( ! SvROK(sv) )
       croak( "Overload::FileCheck::_check need to return an array ref" );
 
-    stat_array = SvRV( sv );
+    stat_array = MUTABLE_AV( SvRV( sv ) );
     if ( SvTYPE(stat_array) !=  SVt_PVAV )
       croak( "Overload::FileCheck::_check need to return an array ref" );
-    if ( AvFILL(stat_array) != 12 )
+    if ( AvFILL(stat_array) != ( STAT_T_MAX - 1 ) )
       croak( "Overload::FileCheck::_check: Array should contain 13 elements" );
 
     /* TODO replace all croak calls with CROAK ?? */
@@ -273,7 +276,9 @@ PP(pp_overload_stat) { /* stat & lstat */
       dSP;
 
       /* drop & replace our stack first element with *_ */
-      SV *previous_stack = sv_2mortal(POPs); /* what do we want to do with this ? */
+      /* Unexpected warning: Attempt to free unreferenced scalar: SV 0x119bd80. */
+      //SV *previous_stack = sv_2mortal(POPs); /* what do we want to do with this ? */
+      SV *previous_stack = POPs;
       PUSHs( MUTABLE_SV( PL_defgv ) ); /* add *_ to the stack */
 
       /* copy the content of mocked_stat to PL_statcache */
@@ -368,6 +373,7 @@ BOOT:
 if (!gl_overload_ft) {
      HV *stash;
      SV *sv;
+     int ix = 0;
 
      Newxz( gl_overload_ft, 1, OverloadFTOps);
 
@@ -381,19 +387,22 @@ if (!gl_overload_ft) {
      newCONSTSUB(stash, "FALLBACK_TO_REAL_OP",  newSVnv(-1) );
 
      /* provide constants to add entry in a fake stat array */
-     newCONSTSUB(stash, "ST_DEV",                newSViv(0) );
-     newCONSTSUB(stash, "ST_INO",                newSViv(1) );
-     newCONSTSUB(stash, "ST_MODE",               newSViv(2) );
-     newCONSTSUB(stash, "ST_NLINK",              newSViv(3) );
-     newCONSTSUB(stash, "ST_UID",                newSViv(4) );
-     newCONSTSUB(stash, "ST_GID",                newSViv(5) );
-     newCONSTSUB(stash, "ST_RDEV",               newSViv(6) );
-     newCONSTSUB(stash, "ST_SIZE",               newSViv(7) );
-     newCONSTSUB(stash, "ST_ATIME",              newSViv(8) );
-     newCONSTSUB(stash, "ST_MTIME",              newSViv(9) );
-     newCONSTSUB(stash, "ST_CTIME",              newSViv(10) );
-     newCONSTSUB(stash, "ST_BLKSIZE",            newSViv(11) );
-     newCONSTSUB(stash, "ST_BLOCKS",             newSViv(12) );
+
+     newCONSTSUB(stash, "ST_DEV",                newSViv(ix++) );
+     newCONSTSUB(stash, "ST_INO",                newSViv(ix++) );
+     newCONSTSUB(stash, "ST_MODE",               newSViv(ix++) );
+     newCONSTSUB(stash, "ST_NLINK",              newSViv(ix++) );
+     newCONSTSUB(stash, "ST_UID",                newSViv(ix++) );
+     newCONSTSUB(stash, "ST_GID",                newSViv(ix++) );
+     newCONSTSUB(stash, "ST_RDEV",               newSViv(ix++) );
+     newCONSTSUB(stash, "ST_SIZE",               newSViv(ix++) );
+     newCONSTSUB(stash, "ST_ATIME",              newSViv(ix++) );
+     newCONSTSUB(stash, "ST_MTIME",              newSViv(ix++) );
+     newCONSTSUB(stash, "ST_CTIME",              newSViv(ix++) );
+     newCONSTSUB(stash, "ST_BLKSIZE",            newSViv(ix++) );
+     newCONSTSUB(stash, "ST_BLOCKS",             newSViv(ix++) );
+     assert(STAT_T_MAX == ix);
+     newCONSTSUB(stash, "STAT_T_MAX",            newSViv(STAT_T_MAX) );
 
      /* copy the original OP then plug our own custom OP function */
      /* view pp_sys.c for complete list */

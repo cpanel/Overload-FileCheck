@@ -223,7 +223,10 @@ sub mock_stat {
         die qq[No optype found for $opname] unless $optype;
 
         # plug the sub
-        $_current_mocks->{$optype} = $sub;
+        $_current_mocks->{$optype} = sub {
+            my $file_or_handle = shift;
+            return $sub->( $opname, $file_or_handle );
+        };
 
         # setup the mock for the OP
         _xs_mock_op($optype);
@@ -283,7 +286,7 @@ sub _check {
     # stat and lstat OP are returning a stat ARRAY in addition to the status code
     if ( $OP_IS_STAT_OR_LSTAT{$optype} ) {
 
-        # ..........
+        # .......... Stat_t
         # dev_t     st_dev     Device ID of device containing file.
         # ino_t     st_ino     File serial number.
         # mode_t    st_mode    Mode of file (see below).
@@ -306,12 +309,15 @@ sub _check {
         my $stat_as_arrayref;
 
         # can handle one ARRAY or a HASH
+        my $stat_t_max = STAT_T_MAX();
         if ( $stat_is_a eq 'ARRAY' ) {
             $stat_as_arrayref = $stat;
-            die q[Stat array should contain 13 values] unless scalar @$stat_as_arrayref == 13;
+            if ( scalar @$stat_as_arrayref != $stat_t_max ) {
+                die qq[Stat array should contain exactly $stat_t_max values];
+            }
         }
         elsif ( $stat_is_a eq 'HASH' ) {
-            $stat_as_arrayref = [ (0) x 13 ];    # start with an empty array
+            $stat_as_arrayref = [ (0) x $stat_t_max ];    # start with an empty array
             foreach my $k ( keys %$stat ) {
                 my $ix = $MAP_STAT_T_IX{ lc($k) };
                 die qq[Unknown index for stat_t struct key $k] unless defined $ix;
@@ -327,43 +333,6 @@ sub _check {
 
     return CHECK_IS_TRUE();
 }
-
-# # should not be called directly
-# # this is called from XS to check if stat OP is mocked
-# # and trigger the callback function when mocked
-# sub _check_stat {
-#     my ( $optype, $file, @others ) = @_;
-
-#     die if scalar @others;    # need to move this in a unit test
-
-#     # we have no custom mock at this point
-#     return -1 unless defined $_current_mocks->{$optype};
-
-#     my $out = $_current_mocks->{$optype}->($file);
-
-#     # FIXME return undef when not defined out
-
-#     if ( !$out ) {
-
-#         # check if the user provided a custom ERRNO error otherwise
-#         #   set one for him, so a test could never fail without having
-#         #   ERRNO set
-#         if ( !int($!) ) {
-#             $! = $DEFAULT_ERRNO{ $REVERSE_MAP{$optype} || 'default' } || $DEFAULT_ERRNO{'default'};
-#         }
-
-#         #return undef unless defined $out;
-#         return 0;
-#     }
-
-#     return -1 if $out == -1;
-
-#     if ( $OP_CAN_RETURN_INT{$optype} ) {
-#         return int($out);    # limitation to int for now
-#     }
-
-#     return 1;
-# }
 
 # accessors for testing purpose mainly
 sub _get_filecheck_ops_map {
