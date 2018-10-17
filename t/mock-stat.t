@@ -19,6 +19,8 @@ ok 1, 'start';
 my $stat_result = [ stat($0) ];
 is scalar @$stat_result, 13, "call stat unmocked";
 
+my $unmocked_stat_for_perl = [ stat($^X) ];
+
 ok Overload::FileCheck::mock_stat( \&my_stat ), "mock_stat succees";
 
 is $call_my_stat, 0, "my_stat was not called at this point";
@@ -83,6 +85,9 @@ $expect_stat->[ Overload::FileCheck::ST_DEV() ]   = 42;
 $expect_stat->[ Overload::FileCheck::ST_ATIME() ] = 1520000000;
 
 is [ stat('hash.stat.2') ], $expect_stat, "hash.stat.2";
+
+is [ stat($^X) ], $unmocked_stat_for_perl, q[stat is mocked but $^X should fallback to the regular stat];
+is [ stat(_) ], $unmocked_stat_for_perl, q[stat is mocked - using _ on an unmocked file];
 
 # --- END ---
 ok Overload::FileCheck::unmock_all_file_checks(), "unmock all";
