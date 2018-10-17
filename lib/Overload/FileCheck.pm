@@ -9,9 +9,42 @@ use XSLoader ();
 use Exporter ();
 use Errno    ();
 
-our @ISA         = qw(Exporter);
-our @EXPORT_OK   = qw(mock_all_file_checks mock_file_check unmock_file_check unmock_all_file_checks);
-our %EXPORT_TAGS = ( all => [@EXPORT_OK] );
+our @ISA = qw(Exporter);
+
+my @EXPORT_STAT_T_IX = qw{
+  ST_DEV
+  ST_INO
+  ST_MODE
+  ST_NLINK
+  ST_UID
+  ST_GID
+  ST_RDEV
+  ST_SIZE
+  ST_ATIME
+  ST_MTIME
+  ST_CTIME
+  ST_BLKSIZE
+  ST_BLOCKS
+};
+
+my @EXPORT_CHECK_STATUS = qw{CHECK_IS_FALSE CHECK_IS_TRUE FALLBACK_TO_REAL_OP};
+
+our @EXPORT_OK = (
+    qw{mock_all_file_checks mock_file_check
+      unmock_file_check unmock_all_file_checks},
+    @EXPORT_CHECK_STATUS,
+    @EXPORT_STAT_T_IX
+);
+
+our %EXPORT_TAGS = (
+    all => [@EXPORT_OK],
+
+    # status code
+    check => [@EXPORT_CHECK_STATUS],
+
+    # STAT array indexes
+    stat => [@EXPORT_STAT_T_IX],
+);
 
 XSLoader::load(__PACKAGE__);
 
@@ -60,8 +93,8 @@ my %MAP_FC_OP = (
 # op_type_id => check
 my %REVERSE_MAP;
 
-my %OP_CAN_RETURN_INT = map { $MAP_FC_OP{$_} => 1 } qw{ s M C A };
-
+my %OP_CAN_RETURN_INT   = map { $MAP_FC_OP{$_} => 1 } qw{ s M C A };
+my %OP_IS_STAT_OR_LSTAT = map { $MAP_FC_OP{$_} => 1 } qw{ stat lstat };
 #
 # This is listing the default ERRNO codes
 #   used by each test when the test fails and
@@ -197,15 +230,18 @@ sub unmock_all_file_checks {
     return unmock_file_check(@mocks);
 }
 
+# should not be called directly
+# this is called from XS to check if one OP is mocked
+# and trigger the callback function when mocked
 sub _check {
     my ( $optype, $file, @others ) = @_;
 
     die if scalar @others;    # need to move this in a unit test
 
     # we have no custom mock at this point
-    return -1 unless defined $_current_mocks->{$optype};
+    return FALLBACK_TO_REAL_OP() unless defined $_current_mocks->{$optype};
 
-    my $out = $_current_mocks->{$optype}->($file);
+    my ( $out, @extra ) = $_current_mocks->{$optype}->($file);
 
     # FIXME return undef when not defined out
 
@@ -219,21 +255,83 @@ sub _check {
         }
 
         #return undef unless defined $out;
-        return 0;
+        return CHECK_IS_FALSE();
     }
 
-    return -1 if $out == -1;
+    return FALLBACK_TO_REAL_OP() if !ref $out && $out == FALLBACK_TO_REAL_OP();
 
     if ( $OP_CAN_RETURN_INT{$optype} ) {
         return int($out);    # limitation to int for now
     }
 
-    return 1;
+    # stat and lstat OP are returning a stat ARRAY in addition to the status code
+    if ( $OP_IS_STAT_OR_LSTAT{$optype} ) {
+        my $stat = $out // $others[0];
+        die q[Your mocked function for stat should return a stat array or hash] unless ref $stat;
+
+        # can handle one ARRAY or a HASH
+
+        # ..........
+        # dev_t     st_dev     Device ID of device containing file.
+        # ino_t     st_ino     File serial number.
+        # mode_t    st_mode    Mode of file (see below).
+        # nlink_t   st_nlink   Number of hard links to the file.
+        # uid_t     st_uid     User ID of file.
+        # gid_t     st_gid     Group ID of file.
+        # dev_t     st_rdev    Device ID (if file is character or block special).
+        # off_t     st_size    For regular files, the file size in bytes.
+        # time_t    st_atime   Time of last access.
+        # time_t    st_mtime   Time of last data modification.
+        # time_t    st_ctime   Time of last status change.
+        # blksize_t st_blksize A file system-specific preferred I/O block size for
+        # blkcnt_t  st_blocks  Number of blocks allocated for this object.
+        # ......
+
+    }
+
+    return CHECK_IS_TRUE();
 }
+
+# # should not be called directly
+# # this is called from XS to check if stat OP is mocked
+# # and trigger the callback function when mocked
+# sub _check_stat {
+#     my ( $optype, $file, @others ) = @_;
+
+#     die if scalar @others;    # need to move this in a unit test
+
+#     # we have no custom mock at this point
+#     return -1 unless defined $_current_mocks->{$optype};
+
+#     my $out = $_current_mocks->{$optype}->($file);
+
+#     # FIXME return undef when not defined out
+
+#     if ( !$out ) {
+
+#         # check if the user provided a custom ERRNO error otherwise
+#         #   set one for him, so a test could never fail without having
+#         #   ERRNO set
+#         if ( !int($!) ) {
+#             $! = $DEFAULT_ERRNO{ $REVERSE_MAP{$optype} || 'default' } || $DEFAULT_ERRNO{'default'};
+#         }
+
+#         #return undef unless defined $out;
+#         return 0;
+#     }
+
+#     return -1 if $out == -1;
+
+#     if ( $OP_CAN_RETURN_INT{$optype} ) {
+#         return int($out);    # limitation to int for now
+#     }
+
+#     return 1;
+# }
 
 # accessors for testing purpose mainly
 sub _get_filecheck_ops_map {
-    return {%MAP_FC_OP};     # return a copy
+    return {%MAP_FC_OP};    # return a copy
 }
 
 1;

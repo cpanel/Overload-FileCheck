@@ -38,6 +38,15 @@
 
 OverloadFTOps  *gl_overload_ft = 0;
 
+/*
+* common helper to callback the pure perl function Overload::FileCheck::_check
+*   and get the mocked value for the -X check
+*
+*  1 check is true  -> OP returns Yes
+*  0 check is false -> OP returns No
+*  TODO:            -> OP returns undef
+* -1 fallback to the original OP
+*/
 int _overload_ft_ops() {
   SV *const arg = *PL_stack_sp;
   int optype = PL_op->op_type;  /* this is the current op_type we are mocking */
@@ -65,6 +74,69 @@ int _overload_ft_ops() {
   check_status = POPi;
 
   /* printf ("######## The result is %d /// OPTYPE is %d\n", check_status, optype); */
+
+  PUTBACK;
+  FREETMPS;
+  LEAVE;
+
+  return check_status;
+}
+
+/*
+*   view perldoc to call SVs, method, ...
+*
+*   https://perldoc.perl.org/perlcall.html
+*
+*   but also https://perldoc.perl.org/perlguts.html
+*/
+
+/*
+*   similar to _overload_ft_ops but expect more args from _check
+*   which returns values for a fake stat
+*
+*   Note: we could also call a dedicated function as _check_stat
+*/
+int _overload_ft_stat(Stat_t *stat) {
+  SV *const arg = *PL_stack_sp;
+  int optype = PL_op->op_type;  /* this is the current op_type we are mocking */
+  int check_status = -1;        /* 1 -> YES ; 0 -> FALSE ; -1 -> delegate */
+
+  dSP;
+  int count;
+
+  ENTER;
+  SAVETMPS;
+
+  PUSHMARK(SP);
+  EXTEND(SP, 2);
+  PUSHs(sv_2mortal(newSViv(optype)));
+  PUSHs(arg);
+  PUTBACK;
+
+  count = call_pv("Overload::FileCheck::_check", G_SCALAR);
+
+  SPAGAIN;
+
+  if (count != 1)
+    croak("No return value from Overload::FileCheck::_check for OP #%d\n", optype);
+
+  check_status = POPi;
+
+  /* fill the stat struct */
+  /* Note: use POPi or POPn ... */
+  stat->st_dev     = 0;
+  stat->st_ino     = 0;
+  stat->st_mode    = 4;
+  stat->st_nlink   = 3;
+  stat->st_uid     = 2;
+  stat->st_gid     = 1;
+  stat->st_rdev    = 42;
+  stat->st_size    = 10001; /* fake size */
+  stat->st_atime   = 1000;
+  stat->st_mtime   = 2000;
+  stat->st_ctime   = 3000;
+  stat->st_blksize = 0;
+  stat->st_blocks  = 0;
 
   PUTBACK;
   FREETMPS;
@@ -116,7 +188,9 @@ PP(pp_overload_ft_int) {
 }
 
 PP(pp_overload_stat) { /* stat & lstat */
+  Stat_t mocked_stat = { 0 };  /* fake stats */
   int check_status = 0;
+
 
   assert( gl_overload_ft );
 
@@ -134,53 +208,41 @@ PP(pp_overload_stat) { /* stat & lstat */
       }
   }
 
-  check_status = _overload_ft_ops(); /* FIXME handle ARRAY */
+  /* calling with our own tmp stat struct, instead of passing directly PL_statcache: more control */
+  check_status = _overload_ft_stat(&mocked_stat);
 
   /* explicit ask for fallback */
   if ( check_status == -1 )
     return CALL_REAL_OP();
 
   /*
-  * one lazy solution could be to do a backup of
+  * The idea is too fool the stat function
+  *   like if it was called by passing _ or *_
   *
+  * We are setting these values as if stat was previously called
   *   - PL_laststype
   *   - PL_statcache
   *   - PL_laststatval
   *   - PL_statname
   *
-  *
-  *   set our values then call the real OP with them and restore the original ones
-  *
-  *   maybe need to tweak to force to use the PL_* cached values
   */
-
 
   {
       dSP;
 
-      /* drop & replace our stack first element */
+      /* drop & replace our stack first element with *_ */
       SV *previous_stack = sv_2mortal(POPs); /* what do we want to do with this ? */
-      PUSHs( MUTABLE_SV( PL_defgv ) );
+      PUSHs( MUTABLE_SV( PL_defgv ) ); /* add *_ to the stack */
 
+      /* copy the content of mocked_stat to PL_statcache */
+      memcpy(&PL_statcache, &mocked_stat, sizeof(PL_statcache));
 
-      PL_statcache.st_ino     = 0;
-      PL_statcache.st_mode    = 4;
-      PL_statcache.st_nlink   = 3;
-      PL_statcache.st_uid     = 2;
-      PL_statcache.st_gid     = 1;
-      PL_statcache.st_rdev    = 42;
-      PL_statcache.st_size    = 10001; /* fake size */
-      PL_statcache.st_atime   = 1000;
-      PL_statcache.st_mtime   = 2000;
-      PL_statcache.st_ctime   = 3000;
-      PL_statcache.st_blksize = 0;
-      PL_statcache.st_blocks  = 0;
-
-      PL_laststatval = 0;               /* it succeeds */
+      PL_laststatval = 0;               /* yes it succeeds */
       PL_laststype   = PL_op->op_type;  /* this was for our OP */
 
+      /* probably not real necesseary, make warning messages nicer */
       if ( previous_stack && SvPOK(previous_stack) )
-        sv_setpv(PL_statname, SvPV_nolen(previous_stack) ); /* need a reach char / SV use the SvPV  */
+        sv_setpv(PL_statname, SvPV_nolen(previous_stack) );
 
 
       // printf ("######## Calling STAT from XS ?? The result is %d /// OPTYPE is %d\n", check_status, PL_op->op_type);
@@ -270,6 +332,26 @@ if (!gl_overload_ft) {
      stash = gv_stashpvn("Overload::FileCheck", 19, TRUE);
 
      newCONSTSUB(stash, "_loaded", newSViv(1) );
+
+     /* provide constants to standardize return values from mocked functions */
+     newCONSTSUB(stash, "CHECK_IS_TRUE",         newSViv(1) );   /* could use &PL_sv_yes */
+     newCONSTSUB(stash, "CHECK_IS_FALSE",        newSViv(0) );   /* could use &PL_sv_no  */
+     newCONSTSUB(stash, "FALLBACK_TO_REAL_OP",  newSVnv(-1) );
+
+     /* provide constants to add entry in a fake stat array */
+     newCONSTSUB(stash, "ST_DEV",                newSViv(0) );
+     newCONSTSUB(stash, "ST_INO",                newSViv(1) );
+     newCONSTSUB(stash, "ST_MODE",               newSViv(2) );
+     newCONSTSUB(stash, "ST_NLINK",              newSViv(3) );
+     newCONSTSUB(stash, "ST_UID",                newSViv(4) );
+     newCONSTSUB(stash, "ST_GID",                newSViv(5) );
+     newCONSTSUB(stash, "ST_RDEV",               newSViv(6) );
+     newCONSTSUB(stash, "ST_SIZE",               newSViv(7) );
+     newCONSTSUB(stash, "ST_ATIME",              newSViv(8) );
+     newCONSTSUB(stash, "ST_MTIME",              newSViv(9) );
+     newCONSTSUB(stash, "ST_CTIME",              newSViv(10) );
+     newCONSTSUB(stash, "ST_BLKSIZE",            newSViv(11) );
+     newCONSTSUB(stash, "ST_BLOCKS",             newSViv(12) );
 
      /* copy the original OP then plug our own custom OP function */
      /* view pp_sys.c for complete list */
