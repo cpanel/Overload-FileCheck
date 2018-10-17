@@ -6,7 +6,7 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck ();
+use Overload::FileCheck q(:all);
 
 my $FILE_CHECK;
 $FILE_CHECK = $1 if $0 =~ qr{t/test-(\w).t$};
@@ -31,7 +31,7 @@ foreach my $f (@candidates) {
 }
 
 # we are now mocking the function
-ok Overload::FileCheck::mock_file_check( $FILE_CHECK, \&my_dash_check ), "mocking -$FILE_CHECK";
+ok mock_file_check( $FILE_CHECK, \&my_dash_check ), "mocking -$FILE_CHECK";
 
 my @mocked_as_true  = qw{peace life love /bin/i-am-there /usr/local/a/b/c/d/e};
 my @mocked_as_false = qw{war drug /not/there /usr/lib /usr/lib64};
@@ -41,11 +41,11 @@ sub my_dash_check {
 
     note "mocked -$FILE_CHECK called for file: ", $f;
 
-    return 1 if grep { $_ eq $f } @mocked_as_true;
-    return 0 if grep { $_ eq $f } @mocked_as_false;
+    return CHECK_IS_TRUE  if grep { $_ eq $f } @mocked_as_true;
+    return CHECK_IS_FALSE if grep { $_ eq $f } @mocked_as_false;
 
     # we have no idea about these files
-    return -1;
+    return FALLBACK_TO_REAL_OP;
 }
 
 foreach my $f ( @mocked_as_true, @known_as_true ) {
@@ -56,9 +56,10 @@ foreach my $f ( @mocked_as_false, @known_as_false ) {
     ok( !do_dash_check($f), "-$FILE_CHECK '$f' is false" );
 }
 
-ok Overload::FileCheck::unmock_file_check($FILE_CHECK);
+ok unmock_file_check($FILE_CHECK);
 
 done_testing;
+exit;
 
 sub do_dash_check {
     my ($what) = @_;

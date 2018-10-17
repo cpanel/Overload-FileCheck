@@ -6,7 +6,7 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck;
+use Overload::FileCheck qw{:all};
 
 my @calls;
 
@@ -20,15 +20,15 @@ my @calls;
 }
 
 {
-    note "we are mocking -e => 1";
-    Overload::FileCheck::mock_file_check(
+    note "we are mocking -e => CHECK_IS_TRUE";
+    mock_file_check(
         '-e' => sub {
             my $f = shift;
 
             note "mocked -e called....";
 
             push @calls, $f;
-            return 1;
+            return CHECK_IS_TRUE;
         }
     );
 
@@ -38,22 +38,22 @@ my @calls;
 }
 
 {
-    note "mocking a second time";
+    note "mocking a second time with CHECK_IS_FALSE";
 
     like(
         dies {
-            Overload::FileCheck::mock_file_check( '-e' => sub { 0 } )
+            mock_file_check( '-e' => sub { CHECK_IS_FALSE } )
         },
         qr/\Q-e is already mocked by Overload::FileCheck/,
         "die when mocking a second time"
     );
 
-    Overload::FileCheck::unmock_file_check('-e');
+    unmock_file_check('-e');
 
-    Overload::FileCheck::unmock_file_check(qw{-e -f});
+    unmock_file_check(qw{-e -f});
 
-    note "we are mocking -e => 0";
-    Overload::FileCheck::mock_file_check( '-e' => sub { 0 } );
+    note "we are mocking -e => CHECK_IS_FALSE";
+    mock_file_check( '-e' => sub { CHECK_IS_FALSE } );
 
     ok !-e q[/tmp], "/tmp does not exist now...";
 }

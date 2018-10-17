@@ -8,16 +8,16 @@ use Test2::Plugin::NoWarnings;
 
 use Overload::FileCheck q{:all};
 
-my $not_there = q{/should/not/be/there}; # improve
+my $not_there = q{/should/not/be/there};    # improve
 
 ok( !-e $not_there, "-e 'not_there' file is missing when unmocked" );
 ok( !-f $not_there, "-f 'not_there' file is missing when unmocked" );
 
-mock_file_check( 'e' => sub { 1 } );
-ok( -e $not_there, "-e 'not_there' missing file exists when mocked" );
+mock_file_check( 'e' => sub { CHECK_IS_TRUE } );
+ok( -e $not_there,  "-e 'not_there' missing file exists when mocked" );
 ok( !-f $not_there, "-f 'not_there' still false" );
 
-mock_file_check( f => sub { 1 } );
+mock_file_check( f => sub { CHECK_IS_TRUE } );
 ok( -e $not_there, "-e mocked => true" );
 ok( -f $not_there, "-f mocked => true" );
 

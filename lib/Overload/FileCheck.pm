@@ -30,8 +30,10 @@ my @STAT_T_IX = qw{
 my @CHECK_STATUS = qw{CHECK_IS_FALSE CHECK_IS_TRUE FALLBACK_TO_REAL_OP};
 
 our @EXPORT_OK = (
-    qw{mock_all_file_checks mock_file_check
-      unmock_file_check unmock_all_file_checks},
+    qw{
+      mock_all_file_checks mock_file_check mock_stat
+      unmock_file_check unmock_all_file_checks unmock_stat
+      },
     @CHECK_STATUS,
     @STAT_T_IX
 );
@@ -235,6 +237,11 @@ sub mock_stat {
     return 1;
 }
 
+# just an alias to unmock stat & lstat at the same time
+sub unmock_stat {
+    return unmock_file_check(qw{stat lstat});
+}
+
 sub unmock_all_file_checks {
 
     if ( !scalar %REVERSE_MAP ) {
@@ -361,7 +368,7 @@ You can mock all file checks using mock_all_file_checks
 
 
   use Test::More;
-  use Overload::FileCheck qw{mock_all_file_checks unmock_all_file_checks};
+  use Overload::FileCheck q{:all};
 
   my @exist     = qw{cherry banana apple};
   my @not_there = qw{not-there missing-file};
@@ -372,14 +379,14 @@ You can mock all file checks using mock_all_file_checks
       my ( $check, $f ) = @_;
 
       if ( $check eq 'e' || $check eq 'f' ) {
-          return 1 if grep { $_ eq $f } @exist;
-          return 0 if grep { $_ eq $f } @not_there;
+          return CHECK_IS_TRUE if grep { $_ eq $f } @exist;
+          return CHECK_IS_FALSE if grep { $_ eq $f } @not_there;
       }
 
-      return 0 if $check eq 'd' && grep { $_ eq $f } @exist;
+      return CHECK_IS_FALSE if $check eq 'd' && grep { $_ eq $f } @exist;
 
       # fallback to the original Perl OP
-      return -1;
+      return FALLBACK_TO_REAL_OP;
   }
 
   foreach my $f (@exist) {
@@ -418,19 +425,19 @@ You can also mock a single file check type like '-e', '-f', ...
         my ( $file_or_handle ) = @_;
 
         # return true on -e for this specific file
-        return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
+        return CHECK_IS_TRUE if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
 
         # claim that /tmp is not available even if it exists
         if ( $file eq '/tmp' ) {
           # you can set Errno to any custom value
           #   or it would be set to Errno::ENOENT() by default
           $! = Errno::ENOENT(); # set errno to "No such file or directory"
-          return 0;
+          return CHECK_IS_FALSE;
         }
 
         # delegate the answer to the Perl CORE -e OP
         #   as we do not want to control these files
-        return -1;
+        return FALLBACK_TO_REAL_OP;
   }
 
   # unmock -e and -f
@@ -448,7 +455,7 @@ and a custom function
 
     use Overload::FileCheck '-e' => \&my_dash_e;
     # Mock one or more check
-    #use Overload::FileCheck '-e' => \&my_dash_e, '-f' => sub { 1 }, 'x' => sub { 0 };
+    #use Overload::FileCheck '-e' => \&my_dash_e, '-f' => sub { 1 }, 'x' => sub { 0 }, ':check';
 
     my @exist = qw{cherry banana apple};
     my @not_there = qw{chocolate and peanuts};
@@ -458,11 +465,11 @@ and a custom function
 
         note "mocked -e called for", $f;
 
-        return 1 if grep { $_ eq $f } @exist;
-        return 0 if grep { $_ eq $f } @not_there;
+        return CHECK_IS_TRUE if grep { $_ eq $f } @exist;
+        return CHECK_IS_FALSE if grep { $_ eq $f } @not_there;
 
         # we have no idea about these files
-        return -1;
+        return FALLBACK_TO_REAL_OP;
     }
 
     foreach my $f ( @exist ) {
@@ -480,7 +487,7 @@ and a custom function
 
 =head1 DESCRIPTION
 
-Overload::FileCheck provides a hook system to mock PErl filechecks OPs
+Overload::FileCheck provides a hook system to mock Perl filechecks OPs
 
 With this module you can provide your own pure perl code when performing
 file checks using on of the -X ops: -e, -f, -z, ...
@@ -517,8 +524,9 @@ https://perldoc.perl.org/functions/-X.html
     -C  Same for inode change time (Unix, may differ for other
   platforms)
 
-
 Also view pp_sys.c from the Perl source code, where are defined the original OPs.
+
+In addition it's also possible to mock the Perl OP C<stat> and C<lstat>, read L</"Mocking stat"> section for more details.
 
 =head1 Usage
 
@@ -527,7 +535,7 @@ at run time.
 
 =head2 Mocking filecheck at import time
 
-    use Overload::FileCheck '-e' => \&my_dash_e, -f => sub { 1 };
+    use Overload::FileCheck '-e' => \&my_dash_e, -f => sub { 1 }, ':check';
 
     # example of your own callback function to mock -e
     # when returning
@@ -539,14 +547,14 @@ at run time.
           my ( $file_or_handle ) = @_;
 
           # return true on -e for this specific file
-          return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
+          return CHECK_IS_TRUE if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
 
           # claim that /tmp is not available even if it exists
-          return 0 if $file eq '/tmp';
+          return CHECK_IS_FALSE if $file eq '/tmp';
 
           # delegate the answer to the Perl CORE -e OP
           #   as we do not want to control these files
-          return -1;
+          return FALLBACK_TO_REAL_OP;
       }
 
 =head2 Mocking filecheck at run time
@@ -554,30 +562,151 @@ at run time.
 You can also get a similar behavior by declaring the overload later at run time.
 
 
-    use Overload::FileCheck (); # no import
+    use Overload::FileCheck q(:all);
 
-    Overload::FileCheck::mock_file_check( '-e' => \&my_dash_e );
-    Overload::FileCheck::mock_file_check( '-f' => sub { 1 } );
-
-    # example of your own callback function to mock -e
-    # when returning
-    #  0: the test is false
-    #  1: the test is true
-    # -1: you want to use the answer from Perl itself :-)
+    mock_file_check( '-e' => \&my_dash_e );
+    mock_file_check( '-f' => sub { CHECK_IS_TRUE } );
 
     sub dash_e {
           my ( $file_or_handle ) = @_;
 
           # return true on -e for this specific file
-          return 1 if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
+          return CHECK_IS_TRUE if $file eq '/this/file/is/not/there/but/act/like/if/it/was';
 
           # claim that /tmp is not available even if it exists
-          return 0 if $file eq '/tmp';
+          return CHECK_IS_FALSE if $file eq '/tmp';
 
           # delegate the answer to the Perl CORE -e OP
           #   as we do not want to control these files
-          return -1;
+          return FALLBACK_TO_REAL_OP;
       }
+
+=head2 Check helpers to use in your callback function
+
+In your callback function you should use the following helpers to return.
+
+=over
+
+=item B<CHECK_IS_FALSE>: use this constant when the test is false
+
+=item B<CHECK_IS_TRUE>: use this when you the test is true
+
+=item B<FALLBACK_TO_REAL_OP>: you want to delegate the answer to Perl itself :-)
+
+=back
+
+It's also possible to return one integer. Checks like C<-s>, C<-M>, C<-C>, C<-A> can return
+any integers.
+
+Example:
+
+    use Overload::FileCheck q(:all);
+
+    mock_file_check( '-s' => \&my_dash_s );
+
+    sub my_dash_s {
+        my ( $file_or_handle ) = @_;
+
+        if ( $file_or_handle eq '/a/b/c' ) {
+            return 42;
+        }
+
+        return FALLBACK_TO_REAL_OP;
+    }
+
+=head1 Mocking stat
+
+=head2 How to mock stat?
+
+Here is a short sample how you can mock stat and lstat.
+This is an extract from the testsuite, Test2::* modules are
+just there to illustrate the behavior. You should not necessary use them
+in your code.
+
+For more advanced samples, browse to the source code and check the test files.
+
+    use Test2::Bundle::Extended;
+    use Test2::Tools::Explain;
+    use Test2::Plugin::NoWarnings;
+
+    use Overload::FileCheck q(:all);
+
+    # our helper would be called for every stat & lstat calls
+    mock_stat( \&my_stat );
+
+    sub my_stat {
+        my ( $opname, $file_or_handle ) = @_;
+
+        # $opname can be 'stat' or 'lstat'
+        # in this sample only mock stat, leave lstat alone
+        return FALLBACK_TO_REAL_OP() if $opname eq 'lstat';
+
+        my $f = $file_or_handle;    # alias for readability
+
+        # return an array ref with 13 elements containing the stat output
+        return [ 1 .. 13 ] if $f eq $0;
+
+        my $fake_stat = [ (0) x 13 ];
+
+        # you also have access to some constants
+        # to set the stat values in the correct slot
+        # this is using some fake values, without any specific meaning...
+        $fake_stat->[ST_DEV]     = 1;
+        $fake_stat->[ST_INO]     = 2;
+        $fake_stat->[ST_MODE]    = 4;
+        $fake_stat->[ST_NLINK]   = 8;
+        $fake_stat->[ST_UID]     = 16;
+        $fake_stat->[ST_GID]     = 32;
+        $fake_stat->[ST_RDEV]    = 64;
+        $fake_stat->[ST_SIZE]    = 128;
+        $fake_stat->[ST_ATIME]   = 256;
+        $fake_stat->[ST_MTIME]   = 512;
+        $fake_stat->[ST_CTIME]   = 1024;
+        $fake_stat->[ST_BLKSIZE] = 2048;
+        $fake_stat->[ST_BLOCKS]  = 4096;
+
+        return $fake_stat if $f eq 'fake.stat';
+
+        # can also retun stats as a hash ref
+        return { st_dev => 1, st_atime => 987654321 } if $f eq 'hash.stat';
+
+        return {
+            st_dev     => 1,
+            st_ino     => 2,
+            st_mode    => 3,
+            st_nlink   => 4,
+            st_uid     => 5,
+            st_gid     => 6,
+            st_rdev    => 7,
+            st_size    => 8,
+            st_atime   => 9,
+            st_mtime   => 10,
+            st_ctime   => 11,
+            st_blksize => 12,
+            st_blocks  => 13,
+        } if $f eq 'hash.stat.full';
+
+        # fallback to the regular OP
+        return FALLBACK_TO_REAL_OP();
+    }
+
+    is [ stat($0) ], [ 1 .. 13 ], 'stat is mocked for $0';
+    is [ stat(_) ], [ 1 .. 13 ],
+      '_ also works: your mocked function is not called';
+
+    is [ stat('fake.stat') ],
+      [ 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096 ];
+
+    is [ stat('hash.stat.full') ], [ 1 .. 13 ];
+
+    unmock_stat();
+
+    done_testing;
+
+
+=head2 Description
+
+TO CONTINUE
 
 =head1 Available functions
 

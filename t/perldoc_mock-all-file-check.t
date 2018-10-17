@@ -7,7 +7,7 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck qw{mock_all_file_checks unmock_all_file_checks};
+use Overload::FileCheck q{:all};
 
 my @exist     = qw{cherry banana apple};
 my @not_there = qw{not-there missing-file};
@@ -18,14 +18,14 @@ sub my_custom_check {
     my ( $check, $f ) = @_;
 
     if ( $check eq 'e' || $check eq 'f' ) {
-        return 1 if grep { $_ eq $f } @exist;
-        return 0 if grep { $_ eq $f } @not_there;
+        return CHECK_IS_TRUE  if grep { $_ eq $f } @exist;
+        return CHECK_IS_FALSE if grep { $_ eq $f } @not_there;
     }
 
-    return 0 if $check eq 'd' && grep { $_ eq $f } @exist;
+    return CHECK_IS_FALSE if $check eq 'd' && grep { $_ eq $f } @exist;
 
     # fallback to the original Perl OP
-    return -1;
+    return FALLBACK_TO_REAL_OP;
 }
 
 foreach my $f (@exist) {
@@ -38,5 +38,7 @@ foreach my $f (@not_there) {
     ok( !-e $f, "-e $f is false" );
     ok( !-f $f, "-f $f is false" );
 }
+
+unmock_all_file_checks();
 
 done_testing;

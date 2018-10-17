@@ -7,7 +7,7 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck qw{mock_all_file_checks unmock_all_file_checks};
+use Overload::FileCheck q{:all};
 
 my @exist     = qw{cherry banana apple};
 my @not_there = qw{mum and dad};
@@ -22,11 +22,11 @@ sub my_custom_check {
     note "mocked check -$check called for ", $f;
     $last_check_called = $check;
 
-    return 1 if grep { $_ eq $f } @exist;
-    return 0 if grep { $_ eq $f } @not_there;
+    return CHECK_IS_TRUE  if grep { $_ eq $f } @exist;
+    return CHECK_IS_FALSE if grep { $_ eq $f } @not_there;
 
     # we have no idea about these files
-    return -1;
+    return FALLBACK_TO_REAL_OP;
 }
 
 my $ALL_CHECKS = Overload::FileCheck::_get_filecheck_ops_map();

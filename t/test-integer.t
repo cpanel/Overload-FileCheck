@@ -6,7 +6,7 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck ();
+use Overload::FileCheck q{:all};
 
 my $FILE_CHECK;
 $FILE_CHECK = $1 if $0 =~ qr{t/test-(\w).t$};
@@ -25,7 +25,7 @@ foreach my $f (@candidates) {
 }
 
 # we are now mocking the function
-ok Overload::FileCheck::mock_file_check( $FILE_CHECK, \&my_dash_check ), "mocking -$FILE_CHECK";
+ok mock_file_check( $FILE_CHECK, \&my_dash_check ), "mocking -$FILE_CHECK";
 
 # mock some int values (should be positive)
 my %mocked_value = (
@@ -47,7 +47,7 @@ sub my_dash_check {
     }
 
     # we have no idea about these files
-    return -1;
+    return FALLBACK_TO_REAL_OP;
 }
 
 foreach my $f ( sort keys %known_value ) {
@@ -58,9 +58,10 @@ foreach my $f ( sort keys %mocked_value ) {
     is( do_dash_check($f), $mocked_value{$f}, "-$FILE_CHECK '$f' mocked value" );
 }
 
-ok Overload::FileCheck::unmock_file_check($FILE_CHECK);
+ok unmock_file_check($FILE_CHECK);
 
 done_testing;
+exit;
 
 sub do_dash_check {
     my ($what) = @_;

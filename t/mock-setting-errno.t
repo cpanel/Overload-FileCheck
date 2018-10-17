@@ -6,7 +6,7 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck qw{unmock_all_file_checks};
+use Overload::FileCheck q{:all};
 use Errno ();
 
 {
@@ -38,14 +38,14 @@ use Errno ();
     my $existing_file = q[/there];
     my $missing_file  = q[/not-there];
 
-    Overload::FileCheck::mock_file_check(
+    mock_file_check(
         '-e' => sub {
             my $f = shift;
-            return 0 if $f eq $missing_file;
-            return 1 if $f eq $existing_file;
+            return CHECK_IS_FALSE if $f eq $missing_file;
+            return CHECK_IS_TRUE  if $f eq $existing_file;
 
             # we do not know and let perl check it for us
-            return -1;
+            return FALLBACK_TO_REAL_OP;
 
         }
     );
@@ -86,14 +86,14 @@ use Errno ();
     local $! = 0;
 
     note "we are mocking -e => 1";
-    Overload::FileCheck::mock_file_check(
+    mock_file_check(
         '-e' => sub {
             my $f = shift;
             note "mocked -e called....";
 
             $! = Errno::EINTR();    # set errno
 
-            return 0;
+            return CHECK_IS_FALSE;
         }
     );
 
