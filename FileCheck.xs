@@ -132,9 +132,11 @@ int _overload_ft_stat(Stat_t *stat) {
 
   if (count < 1)
     croak("Overload::FileCheck::_check for stat OP #%d should return at least one SV.\n", optype);
+  if (count > 2)
+    croak("Overload::FileCheck::_check for stat OP #%d should return no more than two SVs.\n", optype);
 
   /* popping the stack from last entry to first */
-  if (count >= 2) sv           = POPs; /* RvAV */
+  if (count == 2) sv = POPs; /* RvAV */
   check_status = POPi; /* TOOO pop on SV* for true / false & co */
 
   if ( check_status == 1 ) {
@@ -144,7 +146,6 @@ int _overload_ft_stat(Stat_t *stat) {
 
     if (count != 2)
       croak("Overload::FileCheck::_check for stat OP #%d should return two SVs on success.\n", optype);
-
 
     if ( ! SvROK(sv) )
       croak( "Overload::FileCheck::_check need to return an array ref" );

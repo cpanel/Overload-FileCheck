@@ -66,6 +66,14 @@ like(
     "only returning a scalar is wrong..."
 );
 
+foreach my $f (qw{alpha1 alpha2 alpha3}) {
+    like(
+        dies { [ stat($f) ] },
+        qr/Overload::FileCheck - Item [0-9]+ is not numeric/,
+        "$f - item is not numeric"
+    );
+}
+
 foreach my $d (@FAKE_DIR) {
     is [ stat($d) ], stat_for_a_directory(), "stat_for_a_directory - $d";
 }
@@ -85,6 +93,11 @@ $expect_stat->[ Overload::FileCheck::ST_DEV() ]   = 42;
 $expect_stat->[ Overload::FileCheck::ST_ATIME() ] = 1520000000;
 
 is [ stat('hash.stat.2') ], $expect_stat, "hash.stat.2";
+like(
+    dies { [ stat('hash.stat.broken') ] },
+    qr/Unknown index for stat_t/,
+    "using a hash with an unknown key"
+);
 
 is [ stat($^X) ], $unmocked_stat_for_perl, q[stat is mocked but $^X should fallback to the regular stat];
 is [ stat(_) ], $unmocked_stat_for_perl, q[stat is mocked - using _ on an unmocked file];
@@ -108,16 +121,18 @@ sub my_stat {
     return fake_stat_for_dollar_0() if $f eq $current_test;
     return [ 1 .. 42 ] if $f eq 'too.long';
     return [ 1 .. 4 ]  if $f eq 'too.short';
+    return [ 'a', 1 .. 12 ] if $f eq 'alpha1';    # only first letter is alpha
+    return [ 1 .. 12, 'z' ] if $f eq 'alpha2';    # only last letter is alpha
+    return [ 'a' .. 'm' ] if $f eq 'alpha3';      # all letters are alpha
 
     return stat_for_a_directory() if grep { $f eq $_ } @FAKE_DIR;
     return stat_for_a_binary()    if $f eq 'fake.binary';
     return stat_for_a_tty()       if $f eq 'fake.tty';
 
-    # # TODO failure...
-
-    # # the hash alternate
+    # can also return a hash (comlete or incomplete at this time)
     return { st_dev => 42 } if $f eq 'hash.stat.1';
     return { st_dev => 42, st_atime => 1520000000 } if $f eq 'hash.stat.2';
+    return { st_dev => 42, whatever => 1520000000 } if $f eq 'hash.stat.broken';
 
     return 666 if $f eq 'evil';
 
