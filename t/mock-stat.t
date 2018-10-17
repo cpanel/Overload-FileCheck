@@ -64,7 +64,7 @@ sub my_stat {
 
     #return FALLBACK_TO_REAL_OP;
 
-    return [ 0, 4, 3, 2, 1, 42, 10001, 1000, 2000, 3000, 0, 0 ];
+    return [ 0, 0, 4, 3, 2, 1, 42, 10001, 1000, 2000, 3000, 0, 0 ];
 
     # the hash alternate
     return { st_dev => 0 };

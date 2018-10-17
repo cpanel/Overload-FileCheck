@@ -71,7 +71,7 @@ int _overload_ft_ops() {
   if (count != 1)
     croak("No return value from Overload::FileCheck::_check for OP #%d\n", optype);
 
-  check_status = POPi;
+  check_status = POPi; /* TOOO pop on SV* for true / false & co */
 
   /* printf ("######## The result is %d /// OPTYPE is %d\n", check_status, optype); */
 
@@ -90,6 +90,15 @@ int _overload_ft_ops() {
 *   but also https://perldoc.perl.org/perlguts.html
 */
 
+#define set_stat_from_aryix(st, ix) \
+  rsv = ary[ix]; \
+  if (SvROK(rsv)) croak("Overload::FileCheck - Item %d should not be one RV\n", ix); \
+  if (SvIOK(rsv)) st = SvIV( rsv ); \
+  else if (SvUOK(rsv)) st = SvUV( rsv ); \
+  else if (SvNOK(rsv)) st = SvNV( rsv ); \
+  else croak("Overload::FileCheck - Item %d is not numeric...\n", ix);
+
+
 /*
 *   similar to _overload_ft_ops but expect more args from _check
 *   which returns values for a fake stat
@@ -103,6 +112,7 @@ int _overload_ft_stat(Stat_t *stat) {
 
   dSP;
   int count;
+  SV *sv;
 
   ENTER;
   SAVETMPS;
@@ -113,30 +123,62 @@ int _overload_ft_stat(Stat_t *stat) {
   PUSHs(arg);
   PUTBACK;
 
-  count = call_pv("Overload::FileCheck::_check", G_SCALAR);
+  count = call_pv("Overload::FileCheck::_check", G_ARRAY);
 
   SPAGAIN;
 
-  if (count != 1)
-    croak("No return value from Overload::FileCheck::_check for OP #%d\n", optype);
+  if (count != 2)
+    croak("Overload::FileCheck::_check for stat OP #%d should return two SVs.\n", optype);
 
-  check_status = POPi;
+  /* popping the stack from last entry to first */
+  sv           = POPs; /* RvAV */
+  check_status = POPi; /* TOOO pop on SV* for true / false & co */
 
-  /* fill the stat struct */
-  /* Note: use POPi or POPn ... */
-  stat->st_dev     = 0;
-  stat->st_ino     = 0;
-  stat->st_mode    = 4;
-  stat->st_nlink   = 3;
-  stat->st_uid     = 2;
-  stat->st_gid     = 1;
-  stat->st_rdev    = 42;
-  stat->st_size    = 10001; /* fake size */
-  stat->st_atime   = 1000;
-  stat->st_mtime   = 2000;
-  stat->st_ctime   = 3000;
-  stat->st_blksize = 0;
-  stat->st_blocks  = 0;
+  if ( check_status == 1 ) {
+    AV *stat_array;
+    SV **ary;
+    SV *rsv;
+
+    if ( ! SvROK(sv) )
+      croak( "Overload::FileCheck::_check need to return an array ref" );
+
+    stat_array = SvRV( sv );
+    if ( SvTYPE(stat_array) !=  SVt_PVAV )
+      croak( "Overload::FileCheck::_check need to return an array ref" );
+    if ( AvFILL(stat_array) != 12 )
+      croak( "Overload::FileCheck::_check: Array should contain 13 elements" );
+
+    /* TODO replace all croak calls with CROAK ?? */
+
+    ary = AvARRAY(stat_array);
+
+    //printf ("######## check_status %d /// OPTYPE is %d // Flags %d Fill with %d values\n", check_status, optype, SvFLAGS(stat_array), AvFILL(stat_array) );
+
+    // printf( "## Values 0: %d ; 1: %d ; 2: %d ; 3: %d ; 4: %d ; 5: %d\n",
+    //     SvIV( ary[0] ),
+    //     SvIV( ary[1] ),
+    //     SvIV( ary[2] ),
+    //     SvIV( ary[3] ),
+    //     SvIV( ary[4] ),
+    //     SvIV( ary[5] )
+    // );
+
+    /* fill the stat struct */
+    set_stat_from_aryix( stat->st_dev, 0 );       /* IV */
+    set_stat_from_aryix( stat->st_ino, 1 );       /* IV or UV : neg = PL_statcache.st_ino < 0 */
+    set_stat_from_aryix( stat->st_mode, 2 );      /* UV */
+    set_stat_from_aryix( stat->st_nlink, 3 );     /* UV */
+    set_stat_from_aryix( stat->st_uid, 4 );       /* IV ? */
+    set_stat_from_aryix( stat->st_gid, 5 );       /* IV ? */
+    set_stat_from_aryix( stat->st_rdev, 6 );      /* IV or PV */
+    set_stat_from_aryix( stat->st_size, 7 );      /* NV or IV */
+    set_stat_from_aryix( stat->st_atime, 8 );     /* NV or IV */
+    set_stat_from_aryix( stat->st_mtime, 9 );     /* NV or IV */
+    set_stat_from_aryix( stat->st_ctime, 10 );    /* NV or IV */
+    set_stat_from_aryix( stat->st_blksize, 11 );  /* UV or PV */
+    set_stat_from_aryix( stat->st_blocks, 12 );   /* UV or PV */
+
+  }
 
   PUTBACK;
   FREETMPS;

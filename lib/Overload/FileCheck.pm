@@ -11,7 +11,7 @@ use Errno    ();
 
 our @ISA = qw(Exporter);
 
-my @EXPORT_STAT_T_IX = qw{
+my @STAT_T_IX = qw{
   ST_DEV
   ST_INO
   ST_MODE
@@ -27,23 +27,23 @@ my @EXPORT_STAT_T_IX = qw{
   ST_BLOCKS
 };
 
-my @EXPORT_CHECK_STATUS = qw{CHECK_IS_FALSE CHECK_IS_TRUE FALLBACK_TO_REAL_OP};
+my @CHECK_STATUS = qw{CHECK_IS_FALSE CHECK_IS_TRUE FALLBACK_TO_REAL_OP};
 
 our @EXPORT_OK = (
     qw{mock_all_file_checks mock_file_check
       unmock_file_check unmock_all_file_checks},
-    @EXPORT_CHECK_STATUS,
-    @EXPORT_STAT_T_IX
+    @CHECK_STATUS,
+    @STAT_T_IX
 );
 
 our %EXPORT_TAGS = (
     all => [@EXPORT_OK],
 
     # status code
-    check => [@EXPORT_CHECK_STATUS],
+    check => [@CHECK_STATUS],
 
     # STAT array indexes
-    stat => [@EXPORT_STAT_T_IX],
+    stat => [@STAT_T_IX],
 );
 
 XSLoader::load(__PACKAGE__);
@@ -88,6 +88,22 @@ my %MAP_FC_OP = (
     'stat'  => OP_STAT(),
     'lstat' => OP_LSTAT(),
 
+);
+
+my %MAP_STAT_T_IX = (
+    st_dev     => ST_DEV(),
+    st_ino     => ST_INO(),
+    st_mode    => ST_MODE(),
+    st_nlink   => ST_NLINK(),
+    st_uid     => ST_UID(),
+    st_gid     => ST_GID(),
+    st_rdev    => ST_RDEV(),
+    st_size    => ST_SIZE(),
+    st_atime   => ST_ATIME(),
+    st_mtime   => ST_MTIME(),
+    st_ctime   => ST_CTIME(),
+    st_blksize => ST_BLKSIZE(),
+    st_blocks  => ST_BLOCKS(),
 );
 
 # op_type_id => check
@@ -266,10 +282,6 @@ sub _check {
 
     # stat and lstat OP are returning a stat ARRAY in addition to the status code
     if ( $OP_IS_STAT_OR_LSTAT{$optype} ) {
-        my $stat = $out // $others[0];
-        die q[Your mocked function for stat should return a stat array or hash] unless ref $stat;
-
-        # can handle one ARRAY or a HASH
 
         # ..........
         # dev_t     st_dev     Device ID of device containing file.
@@ -287,6 +299,30 @@ sub _check {
         # blkcnt_t  st_blocks  Number of blocks allocated for this object.
         # ......
 
+        my $stat      = $out // $others[0];    # can be array or hash at this point
+        my $stat_is_a = ref $stat;
+        die q[Your mocked function for stat should return a stat array or hash] unless $stat_is_a;
+
+        my $stat_as_arrayref;
+
+        # can handle one ARRAY or a HASH
+        if ( $stat_is_a eq 'ARRAY' ) {
+            $stat_as_arrayref = $stat;
+            die q[Stat array should contain 13 values] unless scalar @$stat_as_arrayref == 13;
+        }
+        elsif ( $stat_is_a eq 'HASH' ) {
+            $stat_as_arrayref = [ (0) x 13 ];    # start with an empty array
+            foreach my $k ( keys %$stat ) {
+                my $ix = $MAP_STAT_T_IX{ lc($k) };
+                die qq[Unknown index for stat_t struct key $k] unless defined $ix;
+                $stat_as_arrayref->[$ix] = $stat->{$k};
+            }
+        }
+        else {
+            die q[Your mocked function for stat should return a stat array or hash];
+        }
+
+        return ( CHECK_IS_TRUE(), $stat_as_arrayref );
     }
 
     return CHECK_IS_TRUE();
