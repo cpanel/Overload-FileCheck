@@ -275,6 +275,10 @@ sub _check {
 
     # FIXME return undef when not defined out
 
+    if ( defined $out && $OP_CAN_RETURN_INT{$optype} ) {
+        return int($out);     # limitation to int for now
+    }
+
     if ( !$out ) {
 
         # check if the user provided a custom ERRNO error otherwise
@@ -289,10 +293,6 @@ sub _check {
     }
 
     return FALLBACK_TO_REAL_OP if !ref $out && $out == FALLBACK_TO_REAL_OP;
-
-    if ( $OP_CAN_RETURN_INT{$optype} ) {
-        return int($out);    # limitation to int for now
-    }
 
     # stat and lstat OP are returning a stat ARRAY in addition to the status code
     if ( $OP_IS_STAT_OR_LSTAT{$optype} ) {
