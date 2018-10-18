@@ -5,10 +5,9 @@ branches:
 language: perl
 matrix:
    fast_finish: true
-   allow_failures:
-     - perl: "5.14"
-     - perl: "5.12"
-     - perl: "5.10"
+#   allow_failures:
+#     - perl: "5.12"
+#     - perl: "5.10"
 env:
   global:
     - PERL_USE_UNSAFE_INC=0

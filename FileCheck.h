@@ -38,6 +38,13 @@ typedef struct {
 */
 
 /* yes.... this is c code in a .h file... */
+
+//#if ( PERL_REVISION == 5 ) && ( PERL_VERSION > 14 )
+#if PERL_VERSION >= 15
+/******************************************************************************/
+/************* Perl > 5.14 ***************************************************/
+/******************************************************************************/
+
 static OP *
 S_ft_return_false(pTHX_ SV *ret) {
     OP *next = NORMAL;
@@ -66,9 +73,29 @@ S_ft_return_true(pTHX_ SV *ret) {
     return NORMAL;
 }
 
+#define FT_RETURNYES    return S_ft_return_true(aTHX_ &PL_sv_yes)
 #define FT_RETURNNO     return S_ft_return_false(aTHX_ &PL_sv_no)
 #define FT_RETURNUNDEF  return S_ft_return_false(aTHX_ &PL_sv_undef)
-#define FT_RETURNYES    return S_ft_return_true(aTHX_ &PL_sv_yes)
+#define FT_RETURN_TARG  return S_ft_return_true(aTHX_ TARG)
+
+#define FT_SETUP_dSP_IF_NEEDED
+
+#else
+/******************************************************************************/
+/************* Perl <= 5.14 ***************************************************/
+/******************************************************************************/
+
+#define FT_SETUP_dSP_IF_NEEDED    dSP
+
+#define FT_RETURNYES    RETURNX(PUSHs(&PL_sv_yes))
+#define FT_RETURNNO     RETURNX(PUSHs(&PL_sv_no))
+#define FT_RETURNUNDEF  RETURNX(PUSHs(&PL_sv_undef))
+#define FT_RETURN_TARG  RETURNX(PUSHs(TARG))
+
+#endif
+/******************************************************************************/
+/* end check Perl version */
+/******************************************************************************/
 
 /*** end of helpers from pp_sys.c ****/
 

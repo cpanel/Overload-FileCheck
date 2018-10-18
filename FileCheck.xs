@@ -14,6 +14,7 @@
 #define NEED_sv_2pv_flags
 
 #include "ppport.h"
+
 #include "FileCheck.h"
 
 /*
@@ -206,11 +207,13 @@ PP(pp_overload_ft_yes_no) {
   RETURN_CALL_REAL_OP_IF_UNMOCK()
   check_status = _overload_ft_ops();
 
-  /* SETERRNO(EEXIST,RMS_FEX); */ /* TODO */
+  {
+    FT_SETUP_dSP_IF_NEEDED;
 
-  if ( check_status == 1 ) FT_RETURNYES;
-  if ( check_status == 0 ) FT_RETURNNO;
-  /* if ( check_status == -1 ) FT_RETURNUNDEF; */ /* TODO */
+    if ( check_status == 1 ) FT_RETURNYES;
+    if ( check_status == 0 ) FT_RETURNNO;
+    /* if ( check_status == -1 ) FT_RETURNUNDEF; */ /* TODO */
+  }
 
   /* fallback */
   return CALL_REAL_OP();
@@ -231,9 +234,11 @@ PP(pp_overload_ft_int) {
 
   {
     dTARGET;
+    FT_SETUP_dSP_IF_NEEDED;
+
     /* TODO this is over simplistic some OPs can return one NV instead of IV */
     sv_setiv(TARG, (IV) check_status);
-    return S_ft_return_true(aTHX_ TARG);
+    FT_RETURN_TARG;
   }
 }
 
