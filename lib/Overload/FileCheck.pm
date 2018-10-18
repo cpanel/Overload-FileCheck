@@ -363,7 +363,7 @@ Overload::FileCheck - override/mock perl filecheck
 
 =begin HTML
 
-<p><img src="https://travis-ci.org/atoomic/Overload-FileCheck.svg?branch=released" width="81" height="18" alt="Travis CI" /></p>
+<p><img src="https://travis-ci.org/CpanelInc/Overload-FileTest.svg?branch=master" width="81" height="18" alt="Travis CI" /></p>
 
 =end HTML
 
