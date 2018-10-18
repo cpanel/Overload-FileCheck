@@ -62,7 +62,9 @@ like(
 
 like(
     dies { [ stat('evil') ] },
-    qr/Your mocked function for stat should return a stat array/,
+
+    # hide stat using [s]tat for the lstat test
+    qr/Your mocked function for [s]tat should return a [s]tat array/,
     "only returning a scalar is wrong..."
 );
 
