@@ -78,6 +78,8 @@ foreach my $f (qw{alpha1 alpha2 alpha3}) {
 
 foreach my $d (@FAKE_DIR) {
     is [ stat($d) ], stat_for_a_directory(), "stat_for_a_directory - $d";
+
+    ok !-e $d, "directory $d does not exist";
 }
 
 is [ stat('fake.binary') ], stat_for_a_binary(), "stat_for_a_binary - 'fake.binary'";
