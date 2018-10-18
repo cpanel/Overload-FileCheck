@@ -6,10 +6,9 @@ use warnings;
 # ABSTRACT: override/mock perl file checks ops
 
 use XSLoader ();
-use Exporter ();
 use Errno    ();
 
-our @ISA = qw(Exporter);
+use base 'Exporter';
 
 my @STAT_T_IX = qw{
   ST_DEV
@@ -157,7 +156,7 @@ sub import {
     }
 
     # callback the exporter logic
-    __PACKAGE__->export_to_level( 1, $class, @for_exporter );
+    return __PACKAGE__->export_to_level( 1, $class, @for_exporter );
 }
 
 sub mock_all_file_checks {
