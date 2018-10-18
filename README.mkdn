@@ -374,13 +374,9 @@ For more advanced samples, browse to the source code and check the test files.
 
     done_testing;
 
-## Description
-
-TO CONTINUE
-
 # Available functions
 
-## mock\_file\_check( $check, $CODE )
+## mock\_file\_check( $check, CODE )
 
 mock\_file\_check function is used to mock one of the filecheck op.
 
@@ -416,6 +412,31 @@ The leading dash is optional.
 By a simple call to unmock\_all\_file\_checks, you would disable the effect of overriding the
 filecheck OPs. (not that the XS code is still plugged in, but fallback as soon
 as possible to the original OP)
+
+## mock\_stat( CODE )
+
+mock\_stat provides one interface to setup a hook for all `stat` and `lstat` calls.
+It's slighly different than the other mock functions. As the first argument passed to
+the hook function would be a string 'stat' or 'lstat'.
+
+You can get a more advanced hook sample from ["Mocking stat"](#mocking-stat).
+
+    use Overload::FileCheck q(:all);
+
+    # our helper would be called for every stat & lstat calls
+    mock_stat( \&my_stat );
+
+    sub my_stat {
+        my ( $opname, $file_or_handle ) = @_;
+
+        ....
+
+        return FALLBACK_TO_REAL_OP;
+    }
+
+## unmock\_stat()
+
+By calling unmock\_stat, you would disable any previous hook set using mock\_stat
 
 # Notice
 
