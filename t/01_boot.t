@@ -11,8 +11,8 @@ use Overload::FileCheck ();
 
 is Overload::FileCheck::_loaded(), 1, '_loaded';
 
-is Overload::FileCheck::CHECK_IS_TRUE(),       1,  "CHECK_IS_TRUE";
-is Overload::FileCheck::CHECK_IS_FALSE(),      0,  "CHECK_IS_FALSE";
+is int Overload::FileCheck::CHECK_IS_TRUE(),  1, "CHECK_IS_TRUE";
+is int Overload::FileCheck::CHECK_IS_FALSE(), 0, "CHECK_IS_FALSE";
 is Overload::FileCheck::FALLBACK_TO_REAL_OP(), -1, "FALLBACK_TO_REAL_OP";
 
 my @ops = qw{

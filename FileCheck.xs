@@ -387,8 +387,8 @@ if (!gl_overload_ft) {
      newCONSTSUB(stash, "_loaded", newSViv(1) );
 
      /* provide constants to standardize return values from mocked functions */
-     newCONSTSUB(stash, "CHECK_IS_TRUE",         newSViv(1) );   /* could use &PL_sv_yes */
-     newCONSTSUB(stash, "CHECK_IS_FALSE",        newSViv(0) );   /* could use &PL_sv_no  */
+     newCONSTSUB(stash, "CHECK_IS_TRUE",         &PL_sv_yes );   /* could use newSViv(1) or &PL_sv_yes */
+     newCONSTSUB(stash, "CHECK_IS_FALSE",        &PL_sv_no );    /* could use newSViv(0) or &PL_sv_no  */
      newCONSTSUB(stash, "FALLBACK_TO_REAL_OP",  newSVnv(-1) );
 
      /* provide constants to add entry in a fake stat array */
