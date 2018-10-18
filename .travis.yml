@@ -1,37 +1,31 @@
-language: "perl"
-sudo: false
+branches:
+  except:
+    - /^issue\d+/
+    - /^gh\d+/
+language: perl
+matrix:
+   fast_finish: true
+   allow_failures:
+     - perl: "5.14"
+     - perl: "5.12"
+     - perl: "5.10"
+env:
+  global:
+    - PERL_USE_UNSAFE_INC=0
+    - AUTHOR_TESTING=1
+    - AUTOMATED_TESTING=1
+    - RELEASE_TESTING=1
 perl:
+  - "5.28"
   - "5.26"
   - "5.24"
   - "5.22"
   - "5.20"
-  - "5.18"
+  - "5.18"  # IO::Tty is missing on the Travis server or cannot be installed?
   - "5.16"
   - "5.14"
   - "5.12"
+  - "5.10"
+script:
+  - perl Makefile.PL && make test
 
-before_install:
-  - mkdir /home/travis/bin || true
-  - ln -s `which true` /home/travis/bin/cpansign
-  - eval $(curl https://travis-perl.github.io/init) --auto
-
-install:
-    - dzil authordeps | cpanm -n || true
-    - dzil listdeps | cpanm -n || true
-    - cpanm -n -q --skip-satisfied --installdeps .
-    - export AUTOMATED_TESTING=1 HARNESS_TIMER=1 AUTHOR_TESTING=0 RELEASE_TESTING=0
-    - cpan-install --coverage   # installs coverage prereqs, if enabled
-
-#script: "dzil test"
-
-# branches:
-#   only:
-#     - master
-notifications:
-  recipients:
-    - atoomic@cpan.org
-  email:
-    on_success: change
-    on_failure: always
-
-#env:
