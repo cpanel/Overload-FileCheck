@@ -1,11 +1,13 @@
-/*  You may distribute under the terms of either the GNU General Public License
- *  or the Artistic License (the same terms as Perl itself)
- *
- * This software is copyright (c) 2018 by cPanel, Inc.
- *
- * copyright@cpanel.net                                         http://cpanel.net
- *
- */
+/*
+*
+* Copyright (c) 2018, cPanel, LLC.
+* All rights reserved.
+* http://cpanel.net
+*
+* This is free software; you can redistribute it and/or modify it under the
+* same terms as Perl itself.
+*
+*/
 
 #include "EXTERN.h"
 #include "perl.h"
