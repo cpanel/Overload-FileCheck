@@ -168,6 +168,7 @@ sub mock_all_file_checks {
     my ($sub) = @_;
 
     foreach my $check ( sort keys %MAP_FC_OP ) {
+        next if $check =~ qr{^l?stat$};    # we should not mock stat
         mock_file_check(
             $check,
             sub {

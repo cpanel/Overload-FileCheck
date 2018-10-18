@@ -52,6 +52,13 @@ foreach my $c ( sort keys %$ALL_CHECKS ) {
     is $last_check_called, $c, "last check called was -$c";
 }
 
+$last_check_called = '';
+
+ok stat($0);
+ok lstat($0);
+
+is $last_check_called, '', "stat or lstat are not mocked";
+
 ok unmock_all_file_checks(), "unmock_all_file_checks";
 
 undef $last_check_called;
