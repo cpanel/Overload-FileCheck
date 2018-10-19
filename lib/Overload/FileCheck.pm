@@ -24,6 +24,18 @@ BEGIN {
     XSLoader::load(__PACKAGE__);
 }
 
+use Fcntl (
+    '_S_IFMT',     # bit mask for the file type bit field
+                   #'S_IFPERMS',   # bit mask for file perms.
+    'S_IFSOCK',    # socket
+    'S_IFLNK',     # symbolic link
+    'S_IFREG',     # regular file
+    'S_IFBLK',     # block device
+    'S_IFDIR',     # directory
+    'S_IFCHR',     # character device
+    'S_IFIFO',     # FIFO
+);
+
 my @STAT_T_IX = qw{
   ST_DEV
   ST_INO
@@ -44,6 +56,7 @@ my @CHECK_STATUS = qw{CHECK_IS_FALSE CHECK_IS_TRUE FALLBACK_TO_REAL_OP};
 
 our @EXPORT_OK = (
     qw{
+      mock_all_from_stat
       mock_all_file_checks mock_file_check mock_stat
       unmock_file_check unmock_all_file_checks unmock_stat
       },
@@ -226,6 +239,283 @@ sub unmock_file_check {
     return 1;
 }
 
+sub mock_all_from_stat {
+    my ($sub_for_stat) = @_;
+
+    # then mock all -X checks to our custom
+    mock_all_file_checks(
+        sub {
+            my ( $check, $f_or_fh ) = @_;
+
+            # the main call
+            my $return = _check_from_stat( $check, $f_or_fh, $sub_for_stat );
+
+            # auto remock the OP (it could have been temporary unmocked to use -X _)
+            _xs_mock_op( $MAP_FC_OP{$check} );
+
+            return $return;
+        }
+    );
+
+    # start by mocking 'stat' and 'lstat' call
+    mock_stat($sub_for_stat);
+
+    return 1;
+}
+
+sub _check_from_stat {
+    my ( $check, $f_or_fh, $sub_for_stat ) = @_;
+
+    my $optype = $MAP_FC_OP{$check};
+
+    # stat would need to be called twice
+    # 1/ we first need to check if we are mocking the file
+    #   or if we let it fallback to the Perl OP
+    # 2/ doing a second stat call in order to cache _
+
+    my (@mocked_lstat_result) = $sub_for_stat->( 'lstat', $f_or_fh );
+    if (
+        scalar @mocked_lstat_result == 1
+        && !ref $mocked_lstat_result[0]
+
+        #&& !ref $mocked_lstat_result[0] ne 'ARRAY'
+        #&& !ref $mocked_lstat_result[0] ne 'HASH'
+        && $mocked_lstat_result[0] == FALLBACK_TO_REAL_OP
+    ) {
+        return FALLBACK_TO_REAL_OP;
+    }
+
+    # avoid a second callback to the user hook (do not really happen for now)
+    local $_current_mocks->{'lstat'} = sub {
+
+        #note "#### RECYCLE lstat $check ", $f_or_fh;
+        return @mocked_lstat_result;
+    };
+
+    # now performing a real stat call [ using the mocked stat function ]
+    my (@lstat) = lstat($f_or_fh);
+
+    # check if it's a symlink... in some cases we want to read stat instead of lstat
+    my $is_symlink = _check_mode_type( $lstat[ST_MODE], S_IFLNK );
+
+    if ( $check eq 'r' ) {
+
+        # -r  File is readable by effective uid/gid.
+        #  return _cando(stat_mode, effective, &PL_statcache)
+        #   return _cando( S_IRUSR, 1 )
+
+        # ugly need a better way to do this...
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -r _ );
+    }
+    elsif ( $check eq 'w' ) {
+
+        # -w  File is writable by effective uid/gid.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -w _ );
+    }
+    elsif ( $check eq 'x' ) {
+
+        # -x  File is executable by effective uid/gid.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -x _ );
+    }
+    elsif ( $check eq 'o' ) {
+
+        # -o  File is owned by effective uid.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -o _ );
+    }
+    elsif ( $check eq 'R' ) {
+
+        # -R  File is readable by real uid/gid.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -R _ );
+    }
+    elsif ( $check eq 'W' ) {
+
+        # -W  File is writable by real uid/gid.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -W _ );
+    }
+    elsif ( $check eq 'X' ) {
+
+        # -X  File is executable by real uid/gid.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -X _ );
+    }
+    elsif ( $check eq 'O' ) {
+
+        # -O  File is owned by real uid.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -O _ );
+    }
+    elsif ( $check eq 'e' ) {
+
+        # -e  File exists.
+        # maybe need to check a little more stuff, not perfect...
+        return _to_bool( scalar @lstat );
+    }
+    elsif ( $check eq 'z' ) {
+
+        # -z  File has zero size (is empty).
+
+        # TODO: can probably avoid the extra called...
+        #   by checking it ourself
+
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -z _ );
+    }
+    elsif ( $check eq 's' ) {
+
+        # -s  File has nonzero size (returns size in bytes).
+
+        # fallback does not work with symlinks
+        #   do the check ourself, which also save a few calls
+
+        my @stat = $is_symlink ? ( stat($f_or_fh) ) : (@lstat);
+        return $stat[ST_SIZE];
+    }
+    elsif ( $check eq 'f' ) {
+        my @stat = $is_symlink ? ( stat($f_or_fh) ) : (@lstat);
+
+        # -f  File is a plain file.
+        return _check_mode_type( $stat[ST_MODE], S_IFREG );
+    }
+    elsif ( $check eq 'd' ) {
+
+        # -d  File is a directory.
+
+        # need to check if it s a symlink
+        my @stat = $is_symlink ? ( stat($f_or_fh) ) : (@lstat);
+
+        return _check_mode_type( $stat[ST_MODE], S_IFDIR );
+    }
+    elsif ( $check eq 'l' ) {
+
+        # -l  File is a symbolic link (false if symlinks aren't
+        #    supported by the file system).
+
+        return $is_symlink;
+
+        #return _check_mode_type( $lstat[ST_MODE], S_IFLNK );
+    }
+    elsif ( $check eq 'p' ) {
+
+        # -p  File is a named pipe (FIFO), or Filehandle is a pipe.
+        return _check_mode_type( $lstat[ST_MODE], S_IFIFO );
+    }
+    elsif ( $check eq 'S' ) {
+
+        # -S  File is a socket.
+        return _check_mode_type( $lstat[ST_MODE], S_IFSOCK );
+    }
+    elsif ( $check eq 'b' ) {
+
+        # -b  File is a block special file.
+        return _check_mode_type( $lstat[ST_MODE], S_IFBLK );
+    }
+    elsif ( $check eq 'c' ) {
+
+        # -c  File is a character special file.
+        return _check_mode_type( $lstat[ST_MODE], S_IFCHR );
+    }
+    elsif ( $check eq 't' ) {
+
+        # -t  Filehandle is opened to a tty.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -t _ );
+    }
+    elsif ( $check eq 'u' ) {
+
+        # -u  File has setuid bit set.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -u _ );
+    }
+    elsif ( $check eq 'g' ) {
+
+        # -g  File has setgid bit set.
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -g _ );
+    }
+    elsif ( $check eq 'k' ) {
+
+        # -k  File has sticky bit set.
+
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -k _ );
+    }
+    elsif ( $check eq 'T' ) {    # heuristic guess.. throw a die?
+
+        # -T  File is an ASCII or UTF-8 text file (heuristic guess).
+
+        #return CHECK_IS_FALSE if -d $f_or_fh;
+
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -T *_ );
+    }
+    elsif ( $check eq 'B' ) {    # heuristic guess.. throw a die?
+
+        # -B  File is a "binary" file (opposite of -T).
+
+        return CHECK_IS_TRUE if -d $f_or_fh;
+
+        # ... we cannot really know...
+        # ... this is an heuristic guess...
+
+        _xs_unmock_op($optype);
+        return _to_bool( scalar -B *_ );
+    }
+    elsif ( $check eq 'M' ) {
+
+        my @stat = $is_symlink ? ( stat($f_or_fh) ) : (@lstat);
+
+        # -M  Script start time minus file modification time, in days.
+        return ( ( get_basetime() - $stat[ST_MTIME] ) / 86400.0 );
+
+        #return int( scalar -M _ );
+    }
+    elsif ( $check eq 'A' ) {
+
+        # -A  Same for access time.
+        #
+        # ((NV)PL_basetime - PL_statcache.st_atime) / 86400.0
+
+        return ( ( get_basetime() - $lstat[ST_ATIME] ) / 86400.0 );
+    }
+    elsif ( $check eq 'C' ) {
+
+        # -C  Same for inode change time (Unix, may differ for other
+        #_xs_unmock_op($optype);
+        #return scalar -C *_;
+
+        #my @stat = $is_symlink ? ( stat($f_or_fh) ) : ( @lstat );
+
+        return ( ( get_basetime() - $lstat[ST_CTIME] ) / 86400.0 );
+    }
+    else {
+        die "Unknown check $check.\n";
+    }
+
+    print STDERR "##### -$check is not implemented....\n";
+
+    return FALLBACK_TO_REAL_OP;
+}
+
+sub _to_bool {
+    my ($s) = @_;
+
+    return ( $s ? CHECK_IS_TRUE : CHECK_IS_FALSE );
+}
+
+sub _check_mode_type {
+    my ( $mode, $type ) = @_;
+
+    return _to_bool( ( $mode & _S_IFMT ) == $type );
+
+    #return _to_bool( ( ( $mode & _S_IFMT ) & $type ) == $type );
+}
+
 # this is a special case used to mock OP_STAT & OP_LSTAT
 sub mock_stat {
     my ($sub) = @_;
@@ -284,7 +574,7 @@ sub _check {
     # FIXME return undef when not defined out
 
     if ( defined $out && $OP_CAN_RETURN_INT{$optype} ) {
-        return int($out);     # limitation to int for now
+        return $out;          # limitation to int for now in fact some returns NVs
     }
 
     if ( !$out ) {
@@ -751,6 +1041,11 @@ For more advanced samples, browse to the source code and check the test files.
     unmock_stat();
 
     done_testing;
+
+
+=head2 Convenient constant available when mocking stat
+
+
 
 
 =head1 Available functions

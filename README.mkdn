@@ -374,6 +374,8 @@ For more advanced samples, browse to the source code and check the test files.
 
     done_testing;
 
+## Convenient constant available when mocking stat
+
 # Available functions
 
 ## mock\_file\_check( $check, CODE )

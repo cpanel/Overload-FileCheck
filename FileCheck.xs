@@ -210,6 +210,8 @@ int _overload_ft_stat(Stat_t *stat) {
     //     SvIV( ary[5] )
     // );
 
+//printf( "### is link ? %d\n", S_ISLNK(16877) ? 1 : 0 );
+
     /* fill the stat struct */
     set_stat_from_aryix( stat->st_dev, 0 );       /* IV */
     set_stat_from_aryix( stat->st_ino, 1 );       /* IV or UV : neg = PL_statcache.st_ino < 0 */
@@ -241,8 +243,19 @@ PP(pp_overload_ft_yes_no) {
 
   assert( gl_overload_ft );
 
+// Perl_warn( "running OP... PL_statcache extract %d, %d, %d, %d, %d ... ",
+//       PL_statcache.st_dev,
+//       PL_statcache.st_ino,
+//       PL_statcache.st_mode,
+//       PL_statcache.st_nlink,
+//       PL_statcache.st_uid
+//   );
+
   /* not currently mocked */
-  RETURN_CALL_REAL_OP_IF_UNMOCK()
+  RETURN_CALL_REAL_OP_IF_UNMOCK();
+
+//Perl_warn(".... continue" );
+
   check_status = _overload_ft_ops();
 
   {
@@ -263,7 +276,7 @@ PP(pp_overload_ft_int) {
   assert( gl_overload_ft );
 
   /* not currently mocked */
-  RETURN_CALL_REAL_OP_IF_UNMOCK()
+  RETURN_CALL_REAL_OP_IF_UNMOCK();
   check_status = _overload_ft_ops();
 
   /* SETERRNO(EEXIST,RMS_FEX); */ /* TODO */
@@ -286,7 +299,7 @@ PP(pp_overload_ft_nv) {
   assert( gl_overload_ft );
 
   /* not currently mocked */
-  RETURN_CALL_REAL_OP_IF_UNMOCK()
+  RETURN_CALL_REAL_OP_IF_UNMOCK();
   status = _overload_ft_ops_sv();
 
   if ( SvIOK(status) && SvIV(status) == -1 )
@@ -367,6 +380,14 @@ PP(pp_overload_stat) { /* stat & lstat */
       if ( previous_stack && SvPOK(previous_stack) )
         sv_setpv(PL_statname, SvPV_nolen(previous_stack) );
 
+
+// Perl_warn( "after stat PL_statcache extract %d, %d, %d, %d, %d ... ",
+//       PL_statcache.st_dev,
+//       PL_statcache.st_ino,
+//       PL_statcache.st_mode,
+//       PL_statcache.st_nlink,
+//       PL_statcache.st_uid
+//   );
 
       // printf ("######## Calling STAT from XS ?? The result is %d /// OPTYPE is %d\n", check_status, PL_op->op_type);
 
