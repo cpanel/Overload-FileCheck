@@ -717,7 +717,7 @@ You can mock all file checks using mock_all_file_checks
   done_testing;
 
 
-You can trace all file checks from your codebase without altering them.
+You can trace all file checks in your codebase without altering it.
 
     use Carp;
     use Overload::FileCheck q{:all};
@@ -1054,6 +1054,109 @@ For more advanced samples, browse to the source code and check the test files.
 =head2 Convenient constant available when mocking stat
 
 
+When mocking stat or lstat function your callback function should return one of the following
+
+=over
+
+=item either one ARRAY Ref containing 13 entries as described by the stat function (in the same order)
+
+=item or one HASH ref using one or more of the following keys: st_dev, st_ino, st_mode, st_nlink,
+  st_uid, st_gid, st_rdev, st_size, st_atime, st_mtime, st_ctime, st_blksiz, st_blocks
+
+=item or return FALLBACK_TO_REAL_OP when you want to let Perl take back the control for that file
+
+=back
+
+In order to manipulate the ARRAY ref and insert/update one specific entry, some constant are available
+to access to the correct index via a 'name':
+
+=over
+
+=item ST_DEV
+
+=item ST_INO
+
+=item ST_MODE
+
+=item ST_NLINK
+
+=item ST_UID
+
+=item ST_GID
+
+=item ST_RDEV
+
+=item ST_SIZE
+
+=item ST_ATIME
+
+=item ST_MTIME
+
+=item ST_CTIME
+
+=item ST_BLKSIZE
+
+=item ST_BLOCKS
+
+=back
+
+
+=head2 Mocking all file checks from a single 'stat' function
+
+A recommended option is to only mock the 'stat' and 'lstat' function
+and let Overload::FileCheck mock for you all file checks: -e, -f, -s, -z, ...
+
+By doing so, using '_' or '*_' (a.k.a. PL_defgv) in your filecheck would work without any extra effort.
+
+    -d "/my/file" && -s _
+
+Netherway some limitations exist. Indeed the checks '-B' and '-T' are using some heuristics to determine
+if the file is a binary or a text. This would require more than just a simple stat output.
+In these cases you can mock the -B and -T to your own functions.
+
+
+    mock_file_check( '-B' => sub { ... } );
+    mock_file_check( '-T' => sub { ... } );
+
+
+By using 'mock_all_from_stat' function, you will only provide a 'fake' stat / lstat function and
+let Overload::FileCheck provide the hooks for all common checks
+
+    # setup at import time
+    use Overload::FileCheck -from-stat => \&my_stat, q{:check};
+
+    # or set it later at run time
+    # mock_all_from_stat( \&my_stat );
+
+    sub mock_stat_from_sys {
+
+      my ( $stat_or_lstat, $f ) = @_;
+
+      # $stat_or_lstat would be set to 'stat' or 'lstat' depending
+      #   if it's a 'stat' or 'lstat' call
+
+      if ( $f eq 'mocked.file'  ) { # "<<$f is mocked>>"
+        return [ # return a fake stat output (regular file)
+            64769, 69887159, 33188, 1, 0, 0, 0, 13,
+            1539928982, 1539716940, 1539716940,
+            4096, 8
+          ];
+      }
+
+      # let Perl answer the stat question for us
+      return FALLBACK_TO_REAL_OP();
+    }
+
+    ...
+    # later in your code
+    if ( -e 'mocked.file' && -f _ && !-d _ ) {
+        print "This file looks real...";
+    }
+
+    ...
+
+    # you can unmock the OPs at anytime
+    unmock_all_file_checks();
 
 
 =head1 Available functions
@@ -1120,6 +1223,14 @@ You can get a more advanced hook sample from L</"Mocking stat">.
 =head2 unmock_stat()
 
 By calling unmock_stat, you would disable any previous hook set using mock_stat
+
+
+=head2 mock_all_from_stat( CODE )
+
+By providing a single hook for 'stat' and 'lstat' you let OverLoad::FileCheck take care
+of mocking all other -X checks.
+
+read L</" Mocking all file checks from a single 'stat' function"> for sample usage.
 
 
 =head1 Notice
