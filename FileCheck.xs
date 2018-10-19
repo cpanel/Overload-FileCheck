@@ -88,6 +88,42 @@ int _overload_ft_ops() {
   return check_status;
 }
 
+SV* _overload_ft_ops_sv() {
+  SV *const arg = *PL_stack_sp;
+  int optype = PL_op->op_type;  /* this is the current op_type we are mocking */
+  SV *status;        /* 1 -> YES ; 0 -> FALSE ; -1 -> delegate */
+
+  dSP;
+  int count;
+
+  ENTER;
+  SAVETMPS;
+
+  PUSHMARK(SP);
+  EXTEND(SP, 2);
+  PUSHs(sv_2mortal(newSViv(optype)));
+  PUSHs(arg);
+  PUTBACK;
+
+  count = call_pv("Overload::FileCheck::_check", G_SCALAR);
+
+  SPAGAIN;
+
+  if (count != 1)
+    croak("No return value from Overload::FileCheck::_check for OP #%d\n", optype);
+
+  status = POPs;
+  SvREFCNT_inc( status );
+
+  /* printf ("######## The result is %d /// OPTYPE is %d\n", check_status, optype); */
+
+  PUTBACK;
+  FREETMPS;
+  LEAVE;
+
+  return status;
+}
+
 /*
 *   view perldoc to call SVs, method, ...
 *
@@ -244,6 +280,34 @@ PP(pp_overload_ft_int) {
   }
 }
 
+PP(pp_overload_ft_nv) {
+  SV *status;
+
+  assert( gl_overload_ft );
+
+  /* not currently mocked */
+  RETURN_CALL_REAL_OP_IF_UNMOCK()
+  status = _overload_ft_ops_sv();
+
+  if ( SvIOK(status) && SvIV(status) == -1 )
+    return CALL_REAL_OP();
+
+  if ( SvNOK(status) && SvNV(status) == -1 )
+    return CALL_REAL_OP();
+
+  {
+    dTARGET;
+    FT_SETUP_dSP_IF_NEEDED;
+
+    if ( SvNOK(status) )
+      sv_setnv(TARG, (NV) SvNV(status) );
+    else if ( SvIOK(status) )
+      sv_setiv(TARG, (IV) SvIV(status) );
+
+    FT_RETURN_TARG;
+  }
+}
+
 PP(pp_overload_stat) { /* stat & lstat */
   Stat_t mocked_stat = { 0 };  /* fake stats */
   int check_status = 0;
@@ -381,6 +445,14 @@ mock_op(optype)
  OUTPUT:
      RETVAL
 
+
+SV*
+get_basetime()
+CODE:
+  RETVAL = newSViv(PL_basetime);
+OUTPUT:
+  RETVAL
+
 BOOT:
 if (!gl_overload_ft) {
      HV *stash;
@@ -430,9 +502,9 @@ if (!gl_overload_ft) {
      /* PP(pp_ftis) - yes/undef/true/false */
      INIT_FILECHECK_MOCK( "OP_FTIS",      OP_FTIS,      &Perl_pp_overload_ft_yes_no);   /* -e */
      INIT_FILECHECK_MOCK( "OP_FTSIZE",    OP_FTSIZE,    &Perl_pp_overload_ft_int);   /* -s */
-     INIT_FILECHECK_MOCK( "OP_FTMTIME",   OP_FTMTIME,   &Perl_pp_overload_ft_int);   /* -M */
-     INIT_FILECHECK_MOCK( "OP_FTCTIME",   OP_FTCTIME,   &Perl_pp_overload_ft_int);   /* -C */
-     INIT_FILECHECK_MOCK( "OP_FTATIME",   OP_FTATIME,   &Perl_pp_overload_ft_int);   /* -A */
+     INIT_FILECHECK_MOCK( "OP_FTMTIME",   OP_FTMTIME,   &Perl_pp_overload_ft_nv);   /* -M */
+     INIT_FILECHECK_MOCK( "OP_FTCTIME",   OP_FTCTIME,   &Perl_pp_overload_ft_nv);   /* -C */
+     INIT_FILECHECK_MOCK( "OP_FTATIME",   OP_FTATIME,   &Perl_pp_overload_ft_nv);   /* -A */
 
      /* PP(pp_ftrowned) yes/no/undef */
      INIT_FILECHECK_MOCK( "OP_FTROWNED",  OP_FTROWNED,  &Perl_pp_overload_ft_yes_no);   /* -O */
