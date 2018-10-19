@@ -256,6 +256,14 @@ __DATA__
 !-l _
 -s _
 !-S _
+# checking some oneliners
+-e 'fake.dir' && -d _
+-d 'fake.dir' && -e _
+!(-d 'fake.dir' && -f _)
+-d 'fake.dir' && !-f _
+-d 'fake.dir' && -d _
+-e 'fake.dir' && -d _ && -s _
+
 
 # checking _ on a file
 -e 'regular.file'
@@ -265,3 +273,10 @@ __DATA__
 -s _
 !-z _
 !-S _
+# checking some oneliners
+-e 'regular.file' && -f _
+-f 'regular.file' && -e _
+!( -e 'regular.file' && -d _ )
+-e 'regular.file' && !-d _
+!-d 'regular.file' && -e _ && -f _
+-f 'regular.file' && -f _ && -f _ && -f _ && -f _ && -f _ && -f _ && -f _
