@@ -14,7 +14,7 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck q{:all};
+use Overload::FileCheck -from_stat => \&my_stat, q{:check};
 use Carp;
 
 my $fake_files = {
@@ -28,8 +28,6 @@ my $fake_files = {
     'regular.file' => stat_for_regular_file(),
     'my.socket'    => stat_for_socket(),
 };
-
-ok mock_all_from_stat( \&my_stat );
 
 # move to DATA
 foreach my $l (<DATA>) {
@@ -48,9 +46,9 @@ done_testing;
 exit;
 
 sub my_stat {
-    my ( $opname, $f ) = @_;
+    my ( $stat_or_lstat, $f ) = @_;
 
-    #note "=== my_stat is called. Type: ", $opname, " File: ", $f;
+    #note "=== my_stat is called. Type: ", $stat_or_lstat, " File: ", $f;
 
     # check if it's mocked
     if ( defined $f && defined $fake_files->{$f} ) {

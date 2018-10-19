@@ -161,7 +161,7 @@ sub import {
     my $_next_check;
     my @for_exporter;
     foreach my $check (@args) {
-        if ( !$_next_check && $check !~ qr{^-} && length($check) != 1 ) {
+        if ( !$_next_check && $check !~ qr{^-} ) {
 
             # this is a valid arg for exporter
             push @for_exporter, $check;
@@ -175,7 +175,15 @@ sub import {
         else {
             # now this is the value
             my $code = $check;
-            mock_file_check( $_next_check, $code );
+
+            # use Overload::FileCheck -from_stat => \&my_stat;
+            if ( $_next_check eq q{-from_stat} || $_next_check eq q{-from-stat} ) {
+                mock_all_from_stat($code);
+            }
+            else {
+                mock_file_check( $_next_check, $code );
+            }
+
             undef $_next_check;
         }
     }
