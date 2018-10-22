@@ -710,7 +710,7 @@ sub _stat_for {
         $stat[ST_MODE] |= ( $type & _S_IFMT );
     }
 
-    # set permission
+    # set permission using octal
     if ( defined $opts->{perms} ) {
 
         # _S_IFMT is used as a protection to do not flip outside the mask
@@ -1246,7 +1246,7 @@ let Overload::FileCheck provide the hooks for all common checks
       }
 
       # let Perl answer the stat question for us
-      return FALLBACK_TO_REAL_OP();
+      return FALLBACK_TO_REAL_OP;
     }
 
     ...
@@ -1259,6 +1259,51 @@ let Overload::FileCheck provide the hooks for all common checks
 
     # you can unmock the OPs at anytime
     unmock_all_file_checks();
+
+
+=head2 Using stat_as_* helpers
+
+When mocking the stat functions you might consider using one of the 'stat_as_*' helper.
+Available functions are:
+
+=over
+
+=item stat_as_directory
+
+=item stat_as_file
+
+=item stat_as_symlink
+
+=item stat_as_socket
+
+=item stat_as_chr
+
+=item stat_as_block
+
+=back
+
+
+All of these functions take some optional arguments to set: uid, gid, size, atime, mtime, ctime, perms, size.
+Example:
+
+
+    use Overload::FileCheck -from-stat => \&my_stat, q{:check};
+
+    sub my_stat {
+        my ( $stat_or_lstat, $f_or_fh ) = @_;
+
+        return stat_as_file() if $f_or_fh eq 'fake.file';
+
+        return stat_as_directory( uid => 0, gid => 'root' ) if $f_or_fh eq 'fake.dir';
+
+        return stat_as_file( mtime => time() ) if $f_or_fh eq 'touch.file';
+
+        return stat_as_file( perms => 0755 ) if $f_or_fh eq 'touch.file.0755';
+
+        return FALLBACK_TO_REAL_OP;
+    }
+
+
 
 
 =head1 Available functions
@@ -1334,6 +1379,37 @@ of mocking all other -X checks.
 
 read L</" Mocking all file checks from a single 'stat' function"> for sample usage.
 
+
+=head2 stat_as_directory( %OPTS )
+
+Create a stat array ref for a directory.
+%OPTS is optional and can set one or more using arguments among: uid, gid, size, atime, mtime, ctime, perms, size.
+read the section L</"Using stat_as_* helpers"> for some sample usages.
+
+=head2 stat_as_file( %OPTS )
+
+Create a stat array ref for a regular file
+view stat_as_directory
+
+=head2 stat_as_symlink( %OPTS )
+
+Create a stat array ref for a symlink
+view stat_as_directory
+
+=head2 stat_as_socket( %OPTS )
+
+Create a stat array ref for a socket
+view stat_as_directory
+
+=head2 stat_as_chr( %OPTS )
+
+Create a stat array ref for an empty character device
+view stat_as_directory
+
+=head2 stat_as_block( %OPTS )
+
+Create a stat array ref for an empty block device
+view stat_as_directory
 
 =head1 Notice
 
