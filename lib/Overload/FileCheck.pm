@@ -573,20 +573,33 @@ sub unmock_all_file_checks {
 # should not be called directly
 # this is called from XS to check if one OP is mocked
 # and trigger the callback function when mocked
+my $_last_check_for;
+
 sub _check {
     my ( $optype, $file, @others ) = @_;
 
-    die if scalar @others;    # need to move this in a unit test
+    die q[_check called without one optype] unless defined $optype;
+    die qq[Unexpected extra argument to file check for OP $optype] if scalar @others;    # need to move this in a unit test
+
+    my $backup_last_check_for = $_last_check_for;
+    $_last_check_for = $file;
 
     # we have no custom mock at this point
     return FALLBACK_TO_REAL_OP unless defined $_current_mocks->{$optype};
+
+    if ( !defined $file ) {
+
+        # this is very very limited...
+        #   and provide an alternate to get PL_defgv in some cases (but can be wrong in many cases)
+        $file = $backup_last_check_for;
+    }
 
     my ( $out, @extra ) = $_current_mocks->{$optype}->($file);
 
     # FIXME return undef when not defined out
 
     if ( defined $out && $OP_CAN_RETURN_INT{$optype} ) {
-        return $out;          # limitation to int for now in fact some returns NVs
+        return $out;    # limitation to int for now in fact some returns NVs
     }
 
     if ( !$out ) {
