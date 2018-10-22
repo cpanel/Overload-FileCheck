@@ -466,6 +466,19 @@ mock_op(optype)
  OUTPUT:
      RETVAL
 
+SV*
+get_statname()
+CODE:
+{
+  if (SvOK(PL_statname) && SvPOK(PL_statname)) {
+    /* printf ("######## get_statname %s\n", SvPV_nolen( PL_statname ) ); */
+    XSRETURN_PV(SvPV_nolen(PL_statname) );
+  }
+  else XSRETURN_UNDEF;
+}
+OUTPUT:
+  RETVAL
+
 
 SV*
 get_basetime()
