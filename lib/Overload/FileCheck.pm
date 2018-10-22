@@ -54,6 +54,9 @@ my @STAT_T_IX = qw{
 
 my @CHECK_STATUS = qw{CHECK_IS_FALSE CHECK_IS_TRUE FALLBACK_TO_REAL_OP};
 
+my @STAT_HELPERS = qw{ stat_as_directory stat_as_file stat_as_symlink
+  stat_as_socket stat_as_chr stat_as_block};
+
 our @EXPORT_OK = (
     qw{
       mock_all_from_stat
@@ -61,7 +64,8 @@ our @EXPORT_OK = (
       unmock_file_check unmock_all_file_checks unmock_stat
       },
     @CHECK_STATUS,
-    @STAT_T_IX
+    @STAT_T_IX,
+    @STAT_HELPERS,
 );
 
 our %EXPORT_TAGS = (
@@ -71,7 +75,7 @@ our %EXPORT_TAGS = (
     check => [@CHECK_STATUS],
 
     # STAT array indexes
-    stat => [@STAT_T_IX],
+    stat => [ @STAT_T_IX, @STAT_HELPERS ],
 );
 
 # hash for every filecheck we can mock
@@ -654,6 +658,106 @@ sub _check {
 # accessors for testing purpose mainly
 sub _get_filecheck_ops_map {
     return {%MAP_FC_OP};    # return a copy
+}
+
+######################################################
+### stat helpers
+######################################################
+
+sub stat_as_directory {
+    my (%opts) = @_;
+
+    return _stat_for( S_IFDIR, \%opts );
+}
+
+sub stat_as_file {
+    my (%opts) = @_;
+
+    return _stat_for( S_IFREG, \%opts );
+}
+
+sub stat_as_symlink {
+    my (%opts) = @_;
+
+    return _stat_for( S_IFLNK, \%opts );
+}
+
+sub stat_as_socket {
+    my (%opts) = @_;
+
+    return _stat_for( S_IFSOCK, \%opts );
+}
+
+sub stat_as_chr {
+    my (%opts) = @_;
+
+    return _stat_for( S_IFCHR, \%opts );
+}
+
+sub stat_as_block {
+    my (%opts) = @_;
+
+    return _stat_for( S_IFBLK, \%opts );
+}
+
+sub _stat_for {
+    my ( $type, $opts ) = @_;
+
+    my @stat = ( (0) x 13 );    # STAT_T_MAX
+
+    # set file type
+    if ( defined $type ) {
+
+        # _S_IFMT is used as a protection to do not flip outside the mask
+        $stat[ST_MODE] |= ( $type & _S_IFMT );
+    }
+
+    # set permission
+    if ( defined $opts->{mode} ) {
+
+        # _S_IFMT is used as a protection to do not flip outside the mask
+        $stat[ST_MODE] |= ( $opts->{mode} & ~_S_IFMT );
+    }
+
+    # deal with UID / GID
+    if ( defined $opts->{uid} ) {
+        if ( $opts->{uid} =~ qr{^[0-9]+$} ) {
+            $stat[ST_UID] = $opts->{uid};
+        }
+        else {
+
+            $stat[ST_UID] = getpwnam( $opts->{uid} );
+        }
+    }
+
+    if ( defined $opts->{gid} ) {
+        if ( $opts->{gid} =~ qr{^[0-9]+$} ) {
+            $stat[ST_GID] = $opts->{gid};
+        }
+        else {
+            $stat[ST_GID] = getgrnam( $opts->{gid} );
+        }
+    }
+
+    # options that we can simply copy to a slot
+    my %name2ix = (
+        size    => ST_SIZE,
+        atime   => ST_ATIME,
+        mtime   => ST_MTIME,
+        ctime   => ST_CTIME,
+        blksize => ST_BLKSIZE,
+        blocks  => ST_BLOCKS,
+    );
+
+    foreach my $k ( keys %$opts ) {
+        $k = lc($k);
+        $k =~ s{^st_}{};
+        next unless defined $name2ix{$k};
+
+        $stat[ $name2ix{$k} ] = $opts->{$k};
+    }
+
+    return \@stat;
 }
 
 1;
