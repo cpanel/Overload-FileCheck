@@ -441,7 +441,7 @@ let Overload::FileCheck provide the hooks for all common checks
       }
 
       # let Perl answer the stat question for us
-      return FALLBACK_TO_REAL_OP();
+      return FALLBACK_TO_REAL_OP;
     }
 
     ...
@@ -454,6 +454,37 @@ let Overload::FileCheck provide the hooks for all common checks
 
     # you can unmock the OPs at anytime
     unmock_all_file_checks();
+
+## Using stat\_as\_\* helpers
+
+When mocking the stat functions you might consider using one of the 'stat\_as\_\*' helper.
+Available functions are:
+
+- stat\_as\_directory
+- stat\_as\_file
+- stat\_as\_symlink
+- stat\_as\_socket
+- stat\_as\_chr
+- stat\_as\_block
+
+All of these functions take some optional arguments to set: uid, gid, size, atime, mtime, ctime, perms, size.
+Example:
+
+    use Overload::FileCheck -from-stat => \&my_stat, q{:check};
+
+    sub my_stat {
+        my ( $stat_or_lstat, $f_or_fh ) = @_;
+
+        return stat_as_file() if $f_or_fh eq 'fake.file';
+
+        return stat_as_directory( uid => 0, gid => 'root' ) if $f_or_fh eq 'fake.dir';
+
+        return stat_as_file( mtime => time() ) if $f_or_fh eq 'touch.file';
+
+        return stat_as_file( perms => 0755 ) if $f_or_fh eq 'touch.file.0755';
+
+        return FALLBACK_TO_REAL_OP;
+    }
 
 # Available functions
 
@@ -525,6 +556,37 @@ By providing a single hook for 'stat' and 'lstat' you let OverLoad::FileCheck ta
 of mocking all other -X checks.
 
 read [" Mocking all file checks from a single 'stat' function"](#mocking-all-file-checks-from-a-single-stat-function) for sample usage.
+
+## stat\_as\_directory( %OPTS )
+
+Create a stat array ref for a directory.
+%OPTS is optional and can set one or more using arguments among: uid, gid, size, atime, mtime, ctime, perms, size.
+read the section ["Using stat\_as\_\* helpers"](#using-stat_as_-helpers) for some sample usages.
+
+## stat\_as\_file( %OPTS )
+
+Create a stat array ref for a regular file
+view stat\_as\_directory
+
+## stat\_as\_symlink( %OPTS )
+
+Create a stat array ref for a symlink
+view stat\_as\_directory
+
+## stat\_as\_socket( %OPTS )
+
+Create a stat array ref for a socket
+view stat\_as\_directory
+
+## stat\_as\_chr( %OPTS )
+
+Create a stat array ref for an empty character device
+view stat\_as\_directory
+
+## stat\_as\_block( %OPTS )
+
+Create a stat array ref for an empty block device
+view stat\_as\_directory
 
 # Notice
 

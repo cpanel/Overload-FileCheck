@@ -82,6 +82,6 @@ $expect->[9]  = 9;
 $expect->[10] = 10;
 is stat_as_file( atime => 8, mtime => 9, ctime => 10 ), $expect, 'atime + mtime + ctime';
 
-is stat_as_file( mode => 0755 ), [ 0, 0, S_IFREG | 0755, (0) x 10 ], 'stat_as_file with mode 0755';
+is stat_as_file( perms => 0755 ), [ 0, 0, S_IFREG | 0755, (0) x 10 ], 'stat_as_file with perms 0755';
 
 done_testing;
