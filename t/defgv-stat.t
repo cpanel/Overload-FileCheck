@@ -62,7 +62,15 @@ sub my_stat {
 
 {
     my $s = [ stat($0) ];
-    is Overload::FileCheck::get_statname(), $0, q[get_statname is set to $0 - mocked];
+    if ( $] >= 5.018 ) {
+        is Overload::FileCheck::get_statname(), $0, q[get_statname is set to $0 - mocked];
+    }
+    else {
+        todo "statname not set <= 5.016..." => sub {
+            is Overload::FileCheck::get_statname(), $0, q[get_statname is set to $0 - mocked];
+        };
+    }
+
     ok -d _, q[we mocked stat and mark $0 as a dir];
 }
 
