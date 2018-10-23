@@ -35,8 +35,10 @@ is stat_as_socket(),    [ 0, 0, S_IFSOCK, (0) x 10 ], 'stat_as_socket';
 is stat_as_chr(),       [ 0, 0, S_IFCHR,  (0) x 10 ], 'stat_as_chr';
 is stat_as_block(),     [ 0, 0, S_IFBLK,  (0) x 10 ], 'stat_as_block';
 
-is stat_as_file( uid => 'root', gid => 'root' ), [ 0, 0, S_IFREG, (0) x 10 ],
-  'stat_as_file( uid => root, gid => root )';
+if ( $> == 0 ) {
+  is stat_as_file( uid => 'root', gid => 'root' ), [ 0, 0, S_IFREG, (0) x 10 ],
+    'stat_as_file( uid => root, gid => root )';
+}
 
 {
     my $daemon_uid = getpwnam('daemon');

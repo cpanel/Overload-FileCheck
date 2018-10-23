@@ -37,11 +37,14 @@ use Carp;
       /bin/true
       /usr/bin/true
       /home
-      /tmp
       /dev/tty1
       /dev/sda1
       /root/.bashrc
     };
+
+    if ( $> == 0 ) {
+        push @candidates, '/tmp';
+    }
 
     my %forbidden = map { $_ => 1 } ( 'T-/dev/tty1', 'B-/dev/tty1' );
 
