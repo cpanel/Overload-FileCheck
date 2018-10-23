@@ -2,6 +2,9 @@ Revision history for Overload-FileCheck
 
 {{$NEXT}}
 
+- mock_stat can handle empty array ref return
+- fix unclosed C comment in FileCheck.xs
+- avoid issues with test files and case insensitive file systems
 - use stat instead of lstat when possible
 - hide the second call to lstat (GH #4)
 - add helpers for stat: stat_as_file, stat_as_directory...
