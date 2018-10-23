@@ -298,9 +298,7 @@ sub _check_from_stat {
     }
 
     # avoid a second callback to the user hook (do not really happen for now)
-    local $_current_mocks->{'lstat'} = sub {
-
-        #note "#### RECYCLE lstat $check ", $f_or_fh;
+    local $_current_mocks->{ $MAP_FC_OP{'lstat'} } = sub {
         return @mocked_lstat_result;
     };
 
