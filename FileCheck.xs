@@ -22,7 +22,7 @@
 /*
 *  Macro to make the moking process easier
 *     for now keep them there, so we can hack them in the same file
-*.
+*/
 
 /* generic macro with args */
 #define _CALL_REAL_PP(zOP) (* ( gl_overload_ft->op[zOP].real_pp ) )(aTHX)
