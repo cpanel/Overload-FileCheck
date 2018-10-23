@@ -27,7 +27,15 @@ sub mystat {
 }
 
 mock_all_from_stat( \&mystat );
-is -s "/abc", 1234, '-s';
+
+if ( $] >= 5.016 ) {
+    is -s "/abc", 1234, '-s';
+}
+else {
+    todo "-s '/abc does not return the size..." => sub {
+        is -s "/abc", 1234, '-s';
+    };
+}
 
 is \@calls, ['stat'], "we can only see one stat call";
 
