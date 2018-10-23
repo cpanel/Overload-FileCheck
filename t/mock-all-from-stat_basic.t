@@ -113,8 +113,7 @@ __DATA__
 !-s 'my.socket'
 
 # a zero stat
-### ... note maybe -e should fail ?
--e 'zero'
+!-e 'zero'
 !-f 'zero'
 !-l 'zero'
 !-d 'zero'

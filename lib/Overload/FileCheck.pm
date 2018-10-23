@@ -291,14 +291,9 @@ sub _check_from_stat {
     my $stat_or_lstat = $can_use_stat ? 'stat' : 'lstat';
 
     my (@mocked_lstat_result) = $sub_for_stat->( $stat_or_lstat, $f_or_fh );
-    if (
-        scalar @mocked_lstat_result == 1
+    if (   scalar @mocked_lstat_result == 1
         && !ref $mocked_lstat_result[0]
-
-        #&& !ref $mocked_lstat_result[0] ne 'ARRAY'
-        #&& !ref $mocked_lstat_result[0] ne 'HASH'
-        && $mocked_lstat_result[0] == FALLBACK_TO_REAL_OP
-    ) {
+        && $mocked_lstat_result[0] == FALLBACK_TO_REAL_OP ) {
         return FALLBACK_TO_REAL_OP;
     }
 
@@ -372,8 +367,8 @@ sub _check_from_stat {
     elsif ( $check eq 'e' ) {
 
         # -e  File exists.
-        # maybe need to check a little more stuff, not perfect...
-        return _to_bool( scalar @lstat );
+        # a file can only exists if MODE is set ?
+        return _to_bool( scalar @lstat && $lstat[ST_MODE] );
     }
     elsif ( $check eq 'z' ) {
 
@@ -483,6 +478,8 @@ sub _check_from_stat {
     elsif ( $check eq 'M' ) {
 
         # -M  Script start time minus file modification time, in days.
+
+        return CHECK_IS_NULL unless scalar @stat && defined $stat[ST_MTIME];
         return ( ( get_basetime() - $stat[ST_MTIME] ) / 86400.0 );
 
         #return int( scalar -M _ );
@@ -492,6 +489,7 @@ sub _check_from_stat {
         # -A  Same for access time.
         #
         # ((NV)PL_basetime - PL_statcache.st_atime) / 86400.0
+        return CHECK_IS_NULL unless scalar @lstat && defined $lstat[ST_ATIME];
 
         return ( ( get_basetime() - $lstat[ST_ATIME] ) / 86400.0 );
     }
@@ -500,6 +498,7 @@ sub _check_from_stat {
         # -C  Same for inode change time (Unix, may differ for other
         #_xs_unmock_op($optype);
         #return scalar -C *_;
+        return CHECK_IS_NULL unless scalar @lstat && defined $lstat[ST_CTIME];
 
         return ( ( get_basetime() - $lstat[ST_CTIME] ) / 86400.0 );
     }
@@ -507,7 +506,7 @@ sub _check_from_stat {
         die "Unknown check $check.\n";
     }
 
-    print STDERR "##### -$check is not implemented....\n";
+    die "FileCheck -$check is not implemented by Overload::FileCheck...";
 
     return FALLBACK_TO_REAL_OP;
 }
@@ -521,9 +520,8 @@ sub _to_bool {
 sub _check_mode_type {
     my ( $mode, $type ) = @_;
 
+    return CHECK_IS_FALSE unless defined $mode;
     return _to_bool( ( $mode & _S_IFMT ) == $type );
-
-    #return _to_bool( ( ( $mode & _S_IFMT ) & $type ) == $type );
 }
 
 # this is a special case used to mock OP_STAT & OP_LSTAT
@@ -631,8 +629,12 @@ sub _check {
         my $stat_t_max = STAT_T_MAX;
         if ( $stat_is_a eq 'ARRAY' ) {
             $stat_as_arrayref = $stat;
-            if ( scalar @$stat_as_arrayref != $stat_t_max ) {
-                die qq[Stat array should contain exactly $stat_t_max values];
+            my $av_size = scalar @$stat;
+            if (
+                $av_size                       # 0 is valid when the file is missing
+                && $av_size != $stat_t_max
+            ) {
+                die qq[Stat array should contain exactly 0 or $stat_t_max values];
             }
         }
         elsif ( $stat_is_a eq 'HASH' ) {
@@ -1116,6 +1118,9 @@ For more advanced samples, browse to the source code and check the test files.
 
         return $fake_stat if $f eq 'fake.stat';
 
+        # return an empty array if you want to mark the file as not available
+        return [];
+
         # can also retun stats as a hash ref
         return { st_dev => 1, st_atime => 987654321 } if $f eq 'hash.stat';
 
@@ -1161,6 +1166,8 @@ When mocking stat or lstat function your callback function should return one of 
 =over
 
 =item either one ARRAY Ref containing 13 entries as described by the stat function (in the same order)
+
+=item or an empty ARRAY Ref, if the file does not exist
 
 =item or one HASH ref using one or more of the following keys: st_dev, st_ino, st_mode, st_nlink,
   st_uid, st_gid, st_rdev, st_size, st_atime, st_mtime, st_ctime, st_blksiz, st_blocks
@@ -1225,7 +1232,7 @@ By using 'mock_all_from_stat' function, you will only provide a 'fake' stat / ls
 let Overload::FileCheck provide the hooks for all common checks
 
     # setup at import time
-    use Overload::FileCheck -from-stat => \&my_stat, q{:check};
+    use Overload::FileCheck -from-stat => \&my_stat, qw{:check :stat};
 
     # or set it later at run time
     # mock_all_from_stat( \&my_stat );
@@ -1243,6 +1250,10 @@ let Overload::FileCheck provide the hooks for all common checks
             1539928982, 1539716940, 1539716940,
             4096, 8
           ];
+
+        return stat_as_file();
+
+        return []; # if the file is missing
       }
 
       # let Perl answer the stat question for us
