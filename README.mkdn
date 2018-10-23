@@ -338,6 +338,9 @@ For more advanced samples, browse to the source code and check the test files.
 
         return $fake_stat if $f eq 'fake.stat';
 
+        # return an empty array if you want to mark the file as not available
+        return [];
+
         # can also retun stats as a hash ref
         return { st_dev => 1, st_atime => 987654321 } if $f eq 'hash.stat';
 
@@ -379,6 +382,7 @@ For more advanced samples, browse to the source code and check the test files.
 When mocking stat or lstat function your callback function should return one of the following
 
 - either one ARRAY Ref containing 13 entries as described by the stat function (in the same order)
+- or an empty ARRAY Ref, if the file does not exist
 - or one HASH ref using one or more of the following keys: st\_dev, st\_ino, st\_mode, st\_nlink,
   st\_uid, st\_gid, st\_rdev, st\_size, st\_atime, st\_mtime, st\_ctime, st\_blksiz, st\_blocks
 - or return FALLBACK\_TO\_REAL\_OP when you want to let Perl take back the control for that file
@@ -420,7 +424,7 @@ By using 'mock\_all\_from\_stat' function, you will only provide a 'fake' stat /
 let Overload::FileCheck provide the hooks for all common checks
 
     # setup at import time
-    use Overload::FileCheck -from-stat => \&my_stat, q{:check};
+    use Overload::FileCheck -from-stat => \&my_stat, qw{:check :stat};
 
     # or set it later at run time
     # mock_all_from_stat( \&my_stat );
@@ -438,6 +442,10 @@ let Overload::FileCheck provide the hooks for all common checks
             1539928982, 1539716940, 1539716940,
             4096, 8
           ];
+
+        return stat_as_file();
+
+        return []; # if the file is missing
       }
 
       # let Perl answer the stat question for us
