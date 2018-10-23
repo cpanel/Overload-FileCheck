@@ -29,6 +29,6 @@ sub mystat {
 mock_all_from_stat( \&mystat );
 is -s "/abc", 1234, '-s';
 
-is \@calls, ['lstat'], "we can only see one lstat call";
+is \@calls, ['stat'], "we can only see one stat call";
 
 done_testing;

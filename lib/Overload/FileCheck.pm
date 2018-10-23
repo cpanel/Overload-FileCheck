@@ -285,7 +285,12 @@ sub _check_from_stat {
     #   or if we let it fallback to the Perl OP
     # 2/ doing a second stat call in order to cache _
 
-    my (@mocked_lstat_result) = $sub_for_stat->( 'lstat', $f_or_fh );
+    my $can_use_stat;
+    $can_use_stat = 1 if $check =~ qr{^[sfdM]$};
+
+    my $stat_or_lstat = $can_use_stat ? 'stat' : 'lstat';
+
+    my (@mocked_lstat_result) = $sub_for_stat->( $stat_or_lstat, $f_or_fh );
     if (
         scalar @mocked_lstat_result == 1
         && !ref $mocked_lstat_result[0]
@@ -298,15 +303,19 @@ sub _check_from_stat {
     }
 
     # avoid a second callback to the user hook (do not really happen for now)
-    local $_current_mocks->{ $MAP_FC_OP{'lstat'} } = sub {
+    local $_current_mocks->{ $MAP_FC_OP{$stat_or_lstat} } = sub {
         return @mocked_lstat_result;
     };
 
     # now performing a real stat call [ using the mocked stat function ]
-    my (@lstat) = lstat($f_or_fh);
+    my ( @stat, @lstat );
 
-    # check if it's a symlink... in some cases we want to read stat instead of lstat
-    my $is_symlink = _check_mode_type( $lstat[ST_MODE], S_IFLNK );
+    if ($can_use_stat) {
+        @stat = stat($f_or_fh);
+    }
+    else {
+        @lstat = lstat($f_or_fh);
+    }
 
     if ( $check eq 'r' ) {
 
@@ -383,11 +392,9 @@ sub _check_from_stat {
         # fallback does not work with symlinks
         #   do the check ourself, which also save a few calls
 
-        my @stat = $is_symlink ? ( stat($f_or_fh) ) : (@lstat);
         return $stat[ST_SIZE];
     }
     elsif ( $check eq 'f' ) {
-        my @stat = $is_symlink ? ( stat($f_or_fh) ) : (@lstat);
 
         # -f  File is a plain file.
         return _check_mode_type( $stat[ST_MODE], S_IFREG );
@@ -396,9 +403,6 @@ sub _check_from_stat {
 
         # -d  File is a directory.
 
-        # need to check if it s a symlink
-        my @stat = $is_symlink ? ( stat($f_or_fh) ) : (@lstat);
-
         return _check_mode_type( $stat[ST_MODE], S_IFDIR );
     }
     elsif ( $check eq 'l' ) {
@@ -406,7 +410,7 @@ sub _check_from_stat {
         # -l  File is a symbolic link (false if symlinks aren't
         #    supported by the file system).
 
-        return $is_symlink;
+        return _check_mode_type( $lstat[ST_MODE], S_IFLNK );
 
         #return _check_mode_type( $lstat[ST_MODE], S_IFLNK );
     }
@@ -478,8 +482,6 @@ sub _check_from_stat {
     }
     elsif ( $check eq 'M' ) {
 
-        my @stat = $is_symlink ? ( stat($f_or_fh) ) : (@lstat);
-
         # -M  Script start time minus file modification time, in days.
         return ( ( get_basetime() - $stat[ST_MTIME] ) / 86400.0 );
 
@@ -498,8 +500,6 @@ sub _check_from_stat {
         # -C  Same for inode change time (Unix, may differ for other
         #_xs_unmock_op($optype);
         #return scalar -C *_;
-
-        #my @stat = $is_symlink ? ( stat($f_or_fh) ) : ( @lstat );
 
         return ( ( get_basetime() - $lstat[ST_CTIME] ) / 86400.0 );
     }
