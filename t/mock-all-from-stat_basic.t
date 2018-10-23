@@ -14,19 +14,19 @@ use Test2::Bundle::Extended;
 use Test2::Tools::Explain;
 use Test2::Plugin::NoWarnings;
 
-use Overload::FileCheck -from_stat => \&my_stat, q{:check};
+use Overload::FileCheck -from_stat => \&my_stat, qw{:check :stat};
 use Carp;
 
 my $fake_files = {
 
-    "$0"           => fake_stat_for_dollar_0(),
-    'fake.binary'  => stat_for_a_binary(),
-    'fake.tty'     => stat_for_a_tty(),
-    'fake.dir'     => stat_for_a_directory(),
-    'a.symlink'    => stat_for_a_symlink(),
+    "$0"           => [ stat($0) ],
+    'fake.binary'  => stat_as_file( perms => 0755, size => 1000 ),
+    'fake.dir'     => stat_as_directory( size => 99 ),
+    'a.symlink'    => stat_as_symlink(),
     'zero'         => fake_stat_zero(),
-    'regular.file' => stat_for_regular_file(),
-    'my.socket'    => stat_for_socket(),
+    'regular.file' => stat_as_file( size => 666 ),
+    'empty.file'   => stat_as_file(),
+    'my.socket'    => stat_as_socket(),
 };
 
 # move to DATA
@@ -62,132 +62,6 @@ sub my_stat {
 
 sub fake_stat_zero {
     return [ (0) x 13 ];
-}
-
-sub stat_for_regular_file {
-    return [
-        64769,
-        69887159,
-        33188,
-        1,
-        0,
-        0,
-        0,
-        13,
-        1539928982,
-        1539716940,
-        1539716940,
-        4096,
-        8
-    ];
-}
-
-sub fake_stat_for_dollar_0 {
-    return [
-        0,
-        0,
-        4,
-        3,
-        2,
-        1,
-        42,
-        10001,
-        1000,
-        2000,
-        3000,
-        0,
-        0
-    ];
-}
-
-sub stat_for_a_directory {
-    return [
-        64769,
-        67149975,
-        16877,
-        23,
-        0,
-        0,
-        0,
-        4096,
-        1539271725,
-        1524671853,
-        1524671853,
-        4096,
-        8,
-    ];
-}
-
-sub stat_for_a_symlink {
-    return [
-        64769,
-        180,
-        41471,
-        1,
-        0,
-        0,
-        0,
-        7,
-        1539897601,
-        1406931830,
-        1406931830,
-        4096,
-        0,
-    ];
-}
-
-sub stat_for_a_binary {
-    return [
-        64769,
-        33728572,
-        33261,
-        1,
-        0,
-        0,
-        0,
-        28920,
-        1539797896,
-        1523421302,
-        1526572488,
-        4096,
-        64,
-    ];
-}
-
-sub stat_for_a_tty {
-    return [
-        5,
-        1043,
-        8592,
-        1,
-        0,
-        5,
-        1025,
-        0,
-        1538428544,
-        1538428544,
-        1538428550,
-        4096,
-        0,
-    ];
-}
-
-sub stat_for_socket {
-    return [
-        64769,
-        44067096,
-        49663,
-        1,
-        997,
-        996,
-        0,
-        0,
-        1539898201,
-        1538428546,
-        1538428546,
-        4096,
-        0
-    ];
 }
 
 __DATA__
@@ -231,7 +105,7 @@ __DATA__
 -l 'a.symlink'
 !-d 'a.symlink'
 !-S 'a.symlink'
-!-z 'a.symlink'
+-z 'a.symlink'
 
 # a Socket
 -e 'my.socket'

@@ -711,10 +711,10 @@ sub _stat_for {
     }
 
     # set permission
-    if ( defined $opts->{mode} ) {
+    if ( defined $opts->{perms} ) {
 
         # _S_IFMT is used as a protection to do not flip outside the mask
-        $stat[ST_MODE] |= ( $opts->{mode} & ~_S_IFMT );
+        $stat[ST_MODE] |= ( $opts->{perms} & ~_S_IFMT );
     }
 
     # deal with UID / GID
