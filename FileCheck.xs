@@ -147,7 +147,7 @@ SV* _overload_ft_ops_sv() {
 *
 *   Note: we could also call a dedicated function as _check_stat
 */
-int _overload_ft_stat(Stat_t *stat) {
+int _overload_ft_stat(Stat_t *stat, int *size) {
   SV *const arg = *PL_stack_sp;
   int optype = PL_op->op_type;  /* this is the current op_type we are mocking */
   int check_status = -1;        /* 1 -> YES ; 0 -> FALSE ; -1 -> delegate */
@@ -178,10 +178,13 @@ int _overload_ft_stat(Stat_t *stat) {
   if (count == 2) sv = POPs; /* RvAV */
   check_status = POPi; /* TOOO pop on SV* for true / false & co */
 
+  *size = 0; /* by default it fails */
+
   if ( check_status == 1 ) {
     AV *stat_array;
     SV **ary;
     SV *rsv;
+    int av_size;
 
     if (count != 2)
       croak("Overload::FileCheck::_check for stat OP #%d should return two SVs on success.\n", optype);
@@ -192,40 +195,31 @@ int _overload_ft_stat(Stat_t *stat) {
     stat_array = MUTABLE_AV( SvRV( sv ) );
     if ( SvTYPE(stat_array) !=  SVt_PVAV )
       croak( "Overload::FileCheck::_check need to return an array ref" );
-    if ( AvFILL(stat_array) != ( STAT_T_MAX - 1 ) )
+
+    av_size = AvFILL(stat_array);
+    if ( av_size > 0 && av_size != ( STAT_T_MAX - 1 ) )
       croak( "Overload::FileCheck::_check: Array should contain 13 elements" );
 
-    /* TODO replace all croak calls with CROAK ?? */
+    if ( av_size > 0 ) {
+      *size = av_size; /* store the av_size */
 
-    ary = AvARRAY(stat_array);
+      ary = AvARRAY(stat_array);
 
-    //printf ("######## check_status %d /// OPTYPE is %d // Flags %d Fill with %d values\n", check_status, optype, SvFLAGS(stat_array), AvFILL(stat_array) );
-
-    // printf( "## Values 0: %d ; 1: %d ; 2: %d ; 3: %d ; 4: %d ; 5: %d\n",
-    //     SvIV( ary[0] ),
-    //     SvIV( ary[1] ),
-    //     SvIV( ary[2] ),
-    //     SvIV( ary[3] ),
-    //     SvIV( ary[4] ),
-    //     SvIV( ary[5] )
-    // );
-
-//printf( "### is link ? %d\n", S_ISLNK(16877) ? 1 : 0 );
-
-    /* fill the stat struct */
-    set_stat_from_aryix( stat->st_dev, 0 );       /* IV */
-    set_stat_from_aryix( stat->st_ino, 1 );       /* IV or UV : neg = PL_statcache.st_ino < 0 */
-    set_stat_from_aryix( stat->st_mode, 2 );      /* UV */
-    set_stat_from_aryix( stat->st_nlink, 3 );     /* UV */
-    set_stat_from_aryix( stat->st_uid, 4 );       /* IV ? */
-    set_stat_from_aryix( stat->st_gid, 5 );       /* IV ? */
-    set_stat_from_aryix( stat->st_rdev, 6 );      /* IV or PV */
-    set_stat_from_aryix( stat->st_size, 7 );      /* NV or IV */
-    set_stat_from_aryix( stat->st_atime, 8 );     /* NV or IV */
-    set_stat_from_aryix( stat->st_mtime, 9 );     /* NV or IV */
-    set_stat_from_aryix( stat->st_ctime, 10 );    /* NV or IV */
-    set_stat_from_aryix( stat->st_blksize, 11 );  /* UV or PV */
-    set_stat_from_aryix( stat->st_blocks, 12 );   /* UV or PV */
+      /* fill the stat struct */
+      set_stat_from_aryix( stat->st_dev, 0 );       /* IV */
+      set_stat_from_aryix( stat->st_ino, 1 );       /* IV or UV : neg = PL_statcache.st_ino < 0 */
+      set_stat_from_aryix( stat->st_mode, 2 );      /* UV */
+      set_stat_from_aryix( stat->st_nlink, 3 );     /* UV */
+      set_stat_from_aryix( stat->st_uid, 4 );       /* IV ? */
+      set_stat_from_aryix( stat->st_gid, 5 );       /* IV ? */
+      set_stat_from_aryix( stat->st_rdev, 6 );      /* IV or PV */
+      set_stat_from_aryix( stat->st_size, 7 );      /* NV or IV */
+      set_stat_from_aryix( stat->st_atime, 8 );     /* NV or IV */
+      set_stat_from_aryix( stat->st_mtime, 9 );     /* NV or IV */
+      set_stat_from_aryix( stat->st_ctime, 10 );    /* NV or IV */
+      set_stat_from_aryix( stat->st_blksize, 11 );  /* UV or PV */
+      set_stat_from_aryix( stat->st_blocks, 12 );   /* UV or PV */
+    }
 
   }
 
@@ -242,14 +236,6 @@ PP(pp_overload_ft_yes_no) {
   int check_status;
 
   assert( gl_overload_ft );
-
-// Perl_warn( "running OP... PL_statcache extract %d, %d, %d, %d, %d ... ",
-//       PL_statcache.st_dev,
-//       PL_statcache.st_ino,
-//       PL_statcache.st_mode,
-//       PL_statcache.st_nlink,
-//       PL_statcache.st_uid
-//   );
 
   /* not currently mocked */
   RETURN_CALL_REAL_OP_IF_UNMOCK();
@@ -324,6 +310,7 @@ PP(pp_overload_ft_nv) {
 PP(pp_overload_stat) { /* stat & lstat */
   Stat_t mocked_stat = { 0 };  /* fake stats */
   int check_status = 0;
+  int size;
 
 
   assert( gl_overload_ft );
@@ -343,7 +330,7 @@ PP(pp_overload_stat) { /* stat & lstat */
   }
 
   /* calling with our own tmp stat struct, instead of passing directly PL_statcache: more control */
-  check_status = _overload_ft_stat(&mocked_stat);
+  check_status = _overload_ft_stat(&mocked_stat, &size);
 
   /* explicit ask for fallback */
   if ( check_status == -1 )
@@ -373,23 +360,17 @@ PP(pp_overload_stat) { /* stat & lstat */
       /* copy the content of mocked_stat to PL_statcache */
       memcpy(&PL_statcache, &mocked_stat, sizeof(PL_statcache));
 
-      PL_laststatval = 0;               /* yes it succeeds */
+      if ( size ) { /* yes it succeeds */
+        PL_laststatval = 0;
+      } else { /* the stat call fails */
+        PL_laststatval = -1;
+      }
+
       PL_laststype   = PL_op->op_type;  /* this was for our OP */
 
       /* probably not real necesseary, make warning messages nicer */
       if ( previous_stack && SvPOK(previous_stack) )
         sv_setpv(PL_statname, SvPV_nolen(previous_stack) );
-
-
-// Perl_warn( "after stat PL_statcache extract %d, %d, %d, %d, %d ... ",
-//       PL_statcache.st_dev,
-//       PL_statcache.st_ino,
-//       PL_statcache.st_mode,
-//       PL_statcache.st_nlink,
-//       PL_statcache.st_uid
-//   );
-
-      // printf ("######## Calling STAT from XS ?? The result is %d /// OPTYPE is %d\n", check_status, PL_op->op_type);
 
     return CALL_REAL_OP();
   }
@@ -489,6 +470,7 @@ if (!gl_overload_ft) {
      /* provide constants to standardize return values from mocked functions */
      newCONSTSUB(stash, "CHECK_IS_TRUE",         &PL_sv_yes );   /* could use newSViv(1) or &PL_sv_yes */
      newCONSTSUB(stash, "CHECK_IS_FALSE",        &PL_sv_no );    /* could use newSViv(0) or &PL_sv_no  */
+     newCONSTSUB(stash, "CHECK_IS_NULL",         &PL_sv_undef ); /* FIXME: need to handle this as a valid answer */
      newCONSTSUB(stash, "FALLBACK_TO_REAL_OP",  newSVnv(-1) );
 
      /* provide constants to add entry in a fake stat array */

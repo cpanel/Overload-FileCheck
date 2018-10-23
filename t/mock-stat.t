@@ -56,7 +56,7 @@ is $previous_stat_result => fake_stat_for_dollar_0(), "previous stat result as m
 
 like(
     dies { [ stat('too.long') ] },
-    qr/Stat array should contain exactly 13 values/,
+    qr/Stat array should contain/,
     "stat array is too long"
 );
 
@@ -64,7 +64,7 @@ is $last_called_for, 'too.long', q[last_called_for too.long];
 
 like(
     dies { [ stat('too.short') ] },
-    qr/Stat array should contain exactly 13 values/,
+    qr/Stat array should contain/,
     "stat array is too short"
 );
 

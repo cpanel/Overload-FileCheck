@@ -114,7 +114,7 @@ use Carp;
                 next;
             }
 
-            if ( !defined $expect && defined $got && $got eq '' ) {
+            if ( !defined $expect && defined $got && ( $got eq '' || $got eq '0' ) ) {
                 todo "-$check '$f' returns '' instead of undef..." => sub {
                     is $got, $expect, "-$check '$f'";
                 };
