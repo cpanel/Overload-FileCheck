@@ -2,6 +2,8 @@ Revision history for Overload-FileCheck
 
 {{$NEXT}}
 
+0.002     2018-10-23 17:12:06-05:00 America/Chicago
+
 - mock_stat can handle empty array ref return
 - fix unclosed C comment in FileCheck.xs
 - avoid issues with test files and case insensitive file systems
