@@ -306,10 +306,12 @@ sub _check_from_stat {
     my ( @stat, @lstat );
 
     if ($can_use_stat) {
-        @stat = stat($f_or_fh);
+        no warnings;    # throw warnings with Perl <= 5.14
+        @stat = stat($f_or_fh) if defined $f_or_fh;
     }
     else {
-        @lstat = lstat($f_or_fh);
+        no warnings;
+        @lstat = lstat($f_or_fh) if defined $f_or_fh;
     }
 
     if ( $check eq 'r' ) {
