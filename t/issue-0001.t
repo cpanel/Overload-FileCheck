@@ -36,6 +36,8 @@ sub my_stat { $called++; return [] }
 {
     note "unmocked: not existing file";
 
+    no warnings;    # throw warnings with Perl <= 5.14
+
     is [ stat($not_there) ], [], "stat not there";
     is $called, 1, "my_stat was called";
     ok !-e _, "!-e _ - unmocked";
