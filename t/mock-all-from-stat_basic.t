@@ -77,8 +77,6 @@ __DATA__
 !-l 'fake.dir'
 !-S 'fake.dir'
 !-b 'fake.dir'
--r 'fake.dir'
--x 'fake.dir'
 
 # regular file
 -e 'regular.file'
