@@ -455,36 +455,6 @@ CODE:
 OUTPUT:
   RETVAL
 
-SV*
-xs_cando(stat_mode, effective_as_int)
-  int stat_mode;
-  int effective_as_int;
-CODE:
-{
-    I32 result;
-    bool effective = FALSE;
-
-    if ( PL_laststatval < 0 )
-      XSRETURN_UNDEF;
-
-    /* performing some checks with PL_statcache */
-    /*
-    result = my_stat_flags(0);
-    if (result < 0)
-      XSRETURN_UNDEF;
-    */
-
-    if ( effective_as_int > 0 )
-        effective = TRUE;
-
-    if (Perl_cando(stat_mode, effective, &PL_statcache))
-      XSRETURN_YES;
-    XSRETURN_NO;
- }
- OUTPUT:
-     RETVAL
-
-
 
 BOOT:
 if (!gl_overload_ft) {
