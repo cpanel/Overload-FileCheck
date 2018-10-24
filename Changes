@@ -3,6 +3,7 @@ Revision history for Overload-FileCheck
 {{$NEXT}}
 
 - fix t/mock-setting-errno.t on server not using english as locale
+- adjust several checks to use stat instead of lstat
 
 0.002     2018-10-23 17:12:06-05:00 America/Chicago
 

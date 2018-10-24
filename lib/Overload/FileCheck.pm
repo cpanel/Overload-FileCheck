@@ -34,6 +34,8 @@ use Fcntl (
     'S_IFDIR',     # directory
     'S_IFCHR',     # character device
     'S_IFIFO',     # FIFO
+
+    # qw{S_IRUSR S_IWUSR S_IXUSR S_IRWXU}
 );
 
 my @STAT_T_IX = qw{
@@ -286,7 +288,7 @@ sub _check_from_stat {
     # 2/ doing a second stat call in order to cache _
 
     my $can_use_stat;
-    $can_use_stat = 1 if $check =~ qr{^[sfdM]$};
+    $can_use_stat = 1 if $check =~ qr{^[sfdMXxzACORWeorw]$};
 
     my $stat_or_lstat = $can_use_stat ? 'stat' : 'lstat';
 
@@ -357,7 +359,10 @@ sub _check_from_stat {
     elsif ( $check eq 'X' ) {
 
         # -X  File is executable by real uid/gid.
+
+        #return _to_bool( xs_cando( S_IXUSR, 0 ) );
         _xs_unmock_op($optype);
+
         return _to_bool( scalar -X _ );
     }
     elsif ( $check eq 'O' ) {
@@ -370,7 +375,7 @@ sub _check_from_stat {
 
         # -e  File exists.
         # a file can only exists if MODE is set ?
-        return _to_bool( scalar @lstat && $lstat[ST_MODE] );
+        return _to_bool( scalar @stat && $stat[ST_MODE] );
     }
     elsif ( $check eq 'z' ) {
 
@@ -491,18 +496,18 @@ sub _check_from_stat {
         # -A  Same for access time.
         #
         # ((NV)PL_basetime - PL_statcache.st_atime) / 86400.0
-        return CHECK_IS_NULL unless scalar @lstat && defined $lstat[ST_ATIME];
+        return CHECK_IS_NULL unless scalar @stat && defined $stat[ST_ATIME];
 
-        return ( ( get_basetime() - $lstat[ST_ATIME] ) / 86400.0 );
+        return ( ( get_basetime() - $stat[ST_ATIME] ) / 86400.0 );
     }
     elsif ( $check eq 'C' ) {
 
         # -C  Same for inode change time (Unix, may differ for other
         #_xs_unmock_op($optype);
         #return scalar -C *_;
-        return CHECK_IS_NULL unless scalar @lstat && defined $lstat[ST_CTIME];
+        return CHECK_IS_NULL unless scalar @stat && defined $stat[ST_CTIME];
 
-        return ( ( get_basetime() - $lstat[ST_CTIME] ) / 86400.0 );
+        return ( ( get_basetime() - $stat[ST_CTIME] ) / 86400.0 );
     }
     else {
         die "Unknown check $check.\n";
