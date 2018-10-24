@@ -412,6 +412,16 @@ sub _check_from_stat {
         # -l  File is a symbolic link (false if symlinks aren't
         #    supported by the file system).
 
+        # > perl -E 'say -e "/"; say -l _;'
+        # 1
+        # The stat preceding -l _ wasn't an lstat
+        # /* validate lstat flag */
+        # if ( PL_laststatval >= 0 && PL_laststype != OP_LSTAT ) {
+        #   static const char* const no_prev_lstat = "The stat preceding -l _ wasn't an lstat";
+        #   PL_laststatval = -1; /* mark it as a failure */
+        #   Perl_croak(aTHX_ "%s", no_prev_lstat);
+        # }
+
         return _check_mode_type( $lstat[ST_MODE], S_IFLNK );
 
         #return _check_mode_type( $lstat[ST_MODE], S_IFLNK );
