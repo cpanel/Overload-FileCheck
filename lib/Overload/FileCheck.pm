@@ -572,6 +572,8 @@ sub unmock_all_file_checks {
 # should not be called directly
 # this is called from XS to check if one OP is mocked
 # and trigger the callback function when mocked
+my $_last_call_for;
+
 sub _check {
     my ( $optype, $file, @others ) = @_;
 
@@ -580,7 +582,9 @@ sub _check {
     # we have no custom mock at this point
     return FALLBACK_TO_REAL_OP unless defined $_current_mocks->{$optype};
 
+    $file = $_last_call_for if !defined $file && defined $_last_call_for && !defined $_current_mocks->{ $MAP_FC_OP{'stat'} };
     my ( $out, @extra ) = $_current_mocks->{$optype}->($file);
+    $_last_call_for = $file;
 
     # FIXME return undef when not defined out
 
