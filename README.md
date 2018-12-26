@@ -4,7 +4,7 @@ Overload::FileCheck - override/mock perl file check -X: -e, -f, -d, ...
 
 # VERSION
 
-version 0.007
+version 0.008
 
 # SYNOPSIS
 
@@ -68,7 +68,7 @@ Overload::FileCheck provides a hook system to mock Perl filechecks OPs
 With this module you can provide your own pure perl code when performing
 file checks using one of the -X ops: -e, -f, -z, ...
 
-https://perldoc.perl.org/functions/-X.html
+[https://perldoc.perl.org/functions/-X.html](https://perldoc.perl.org/functions/-X.html)
 
 ```
   -r  File is readable by effective uid/gid.
