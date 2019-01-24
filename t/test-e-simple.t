@@ -40,7 +40,7 @@ $dash_e_mocked = CHECK_IS_TRUE;
 is [ -e "/this/is/there" ], [ 1 ], "-e CHECK_IS_TRUE";
 
 $dash_e_mocked = CHECK_IS_FALSE;
-is [ -e "/this/is/not/there" ], [ '' ], "-e CHECK_IS_FALSE"; # FIXME need to return undef
+is [ -e "/this/is/not/there" ], [ undef ], "-e CHECK_IS_FALSE";
 
 done_testing;
 exit;
