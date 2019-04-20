@@ -830,7 +830,7 @@ L<https://perldoc.perl.org/functions/-X.html>
 
 Also view pp_sys.c from the Perl source code, where are defined the original OPs.
 
-In addition it's also possible to mock the Perl OP C<stat> and C<lstat>, read L</"Mocking stat"> section for more details.
+In addition it's also possible to mock the Perl OP C<stat> and C<lstat>, read L</"Mocking stat and lstat"> section for more details.
 
 =head1 Usage and Examples
 
