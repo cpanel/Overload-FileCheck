@@ -7,8 +7,7 @@
 
 #include <perl.h>
 
-/* TODO reduce that value and add a macro to define them */
-#define OP_MAX	1024
+#define OP_MAX	MAXO
 
 /* informations for a single overload mock */
 typedef struct {

@@ -4,7 +4,7 @@ Overload::FileCheck - override/mock perl file check -X: -e, -f, -d, ...
 
 # VERSION
 
-version 0.009
+version 0.010
 
 # SYNOPSIS
 
