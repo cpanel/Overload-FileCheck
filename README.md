@@ -65,6 +65,8 @@ done_testing;
 
 Overload::FileCheck provides a hook system to mock Perl filechecks OPs
 
+[![](https://github.com/CpanelInc/Overload-FileCheck/workflows/linux/badge.svg)](https://github.com/CpanelInc/Overload-FileCheck/actions) [![](https://github.com/CpanelInc/Overload-FileCheck/workflows/macos/badge.svg)](https://github.com/CpanelInc/Overload-FileCheck/actions) [![](https://github.com/CpanelInc/Overload-FileCheck/workflows/windows/badge.svg)](https://github.com/CpanelInc/Overload-FileCheck/actions)
+
 With this module you can provide your own pure perl code when performing
 file checks using one of the -X ops: -e, -f, -z, ...
 
@@ -104,7 +106,7 @@ platforms)
 
 Also view pp\_sys.c from the Perl source code, where are defined the original OPs.
 
-In addition it's also possible to mock the Perl OP `stat` and `lstat`, read ["Mocking stat"](#mocking-stat) section for more details.
+In addition it's also possible to mock the Perl OP `stat` and `lstat`, read ["Mocking stat and lstat"](#mocking-stat-and-lstat) section for more details.
 
 # Usage and Examples
 

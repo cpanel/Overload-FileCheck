@@ -773,6 +773,12 @@ sub _stat_for {
 
 =encoding utf-8
 
+=begin markdown
+
+[![](https://github.com/CpanelInc/Overload-FileCheck/workflows/linux/badge.svg)](https://github.com/CpanelInc/Overload-FileCheck/actions) [![](https://github.com/CpanelInc/Overload-FileCheck/workflows/macos/badge.svg)](https://github.com/CpanelInc/Overload-FileCheck/actions) [![](https://github.com/CpanelInc/Overload-FileCheck/workflows/windows/badge.svg)](https://github.com/CpanelInc/Overload-FileCheck/actions)
+
+=end markdown
+
 =head1 SYNOPSIS
 
 Overload::FileCheck provides a way to mock one or more file checks.
