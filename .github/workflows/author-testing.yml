@@ -3,28 +3,27 @@ name: author-testing
 on:
   push:
     branches:
-      - '*'
+      - "*"
     tags-ignore:
-      - '*'
+      - "*"
   pull_request:
 
 jobs:
   perl:
-
     runs-on: ubuntu-latest
 
     env:
-       PERL_USE_UNSAFE_INC: 0
-       AUTHOR_TESTING: 1
-       AUTOMATED_TESTING: 1
-       RELEASE_TESTING: 1
-       PERL_CARTON_PATH: $GITHUB_WORKSPACE/local
+      PERL_USE_UNSAFE_INC: 0
+      AUTHOR_TESTING: 1
+      AUTOMATED_TESTING: 1
+      RELEASE_TESTING: 1
+      PERL_CARTON_PATH: $GITHUB_WORKSPACE/local
 
     strategy:
       fail-fast: false
       matrix:
         perl-version:
-          - '5.30'
+          - "5.30"
 
     container:
       image: perldocker/perl-tester:${{ matrix.perl-version }}

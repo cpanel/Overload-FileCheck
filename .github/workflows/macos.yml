@@ -3,22 +3,21 @@ name: macos
 on:
   push:
     branches:
-      - '*'
+      - "*"
     tags-ignore:
-      - '*'
+      - "*"
   pull_request:
 
 jobs:
   perl:
-
     runs-on: macOS-latest
 
     env:
-       PERL_USE_UNSAFE_INC: 0
-       AUTHOR_TESTING: 1
-       AUTOMATED_TESTING: 1
-       RELEASE_TESTING: 1
-       PERL_CARTON_PATH: $GITHUB_WORKSPACE/local
+      PERL_USE_UNSAFE_INC: 0
+      AUTHOR_TESTING: 1
+      AUTOMATED_TESTING: 1
+      RELEASE_TESTING: 1
+      PERL_CARTON_PATH: $GITHUB_WORKSPACE/local
 
     steps:
       - uses: actions/checkout@v1
