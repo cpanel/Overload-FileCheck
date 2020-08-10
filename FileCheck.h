@@ -5,6 +5,8 @@
 #ifndef XS_FILE_CHECK_H
 #  define XS_FILE_CHECK_H 1
 
+#define NEED_sv_2pv_flags
+#include "ppport.h"
 #include <perl.h>
 
 #define OP_MAX	MAXO
@@ -38,8 +40,7 @@ typedef struct {
 
 /* yes.... this is c code in a .h file... */
 
-//#if ( PERL_REVISION == 5 ) && ( PERL_VERSION > 14 )
-#if PERL_VERSION >= 15
+#if PERL_VERSION_GE(5,15,0)
 /******************************************************************************/
 /************* Perl > 5.14 ***************************************************/
 /******************************************************************************/
@@ -84,7 +85,7 @@ S_ft_return_true(pTHX_ SV *ret) {
 /************* Perl <= 5.14 ***************************************************/
 /******************************************************************************/
 
-#if PERL_VERSION >= 14
+#if PERL_VERSION_GE(5,14,0)
 PERL_STATIC_INLINE OP *
 #else
 OP *
