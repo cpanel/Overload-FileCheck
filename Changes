@@ -2,6 +2,8 @@ Revision history for Overload-FileCheck
 
 {{$NEXT}}
 
+0.011     2022-01-10 09:17:19-07:00 America/Denver
+
 - Better handling of nonexistent stat() values - Sawyer X
 - Fix macOS when running tests privileged - FGasper
 
