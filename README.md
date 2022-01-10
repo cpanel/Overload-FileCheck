@@ -4,7 +4,7 @@ Overload::FileCheck - override/mock perl file check -X: -e, -f, -d, ...
 
 # VERSION
 
-version 0.010
+version 0.011
 
 # SYNOPSIS
 
@@ -755,7 +755,7 @@ Nicolas R <atoomic@cpan.org>
 
 # COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2020 by cPanel, Inc.
+This software is copyright (c) 2022 by cPanel, L.L.C.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
