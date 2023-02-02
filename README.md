@@ -242,7 +242,7 @@ unmock_all_file_checks();
 
 __END__
 
-# The ouput looks similar to
+# The output looks similar to
 
 -d '/root' called from  at t/perldoc_mock-all-file-check-trace.t line 26.
 -l '/root' called from  at t/perldoc_mock-all-file-check-trace.t line 27.
@@ -412,7 +412,7 @@ sub my_stat {
 
     return $fake_stat if $f eq 'fake.stat';
 
-    # can also retun stats as a hash ref
+    # can also return stats as a hash ref
     return { st_dev => 1, st_atime => 987654321 } if $f eq 'hash.stat';
 
     return {
