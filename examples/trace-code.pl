@@ -27,7 +27,7 @@ unmock_all_file_checks();
 
 __END__
 
-# The ouput looks similar to
+# The output looks similar to
 
 -d '/root' called from  at t/perldoc_mock-all-file-check-trace.t line 26.
 -l '/root' called from  at t/perldoc_mock-all-file-check-trace.t line 27.

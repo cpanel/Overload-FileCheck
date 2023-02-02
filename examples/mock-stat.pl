@@ -45,7 +45,7 @@ sub my_stat {
 
     return $fake_stat if $f eq 'fake.stat';
 
-    # can also retun stats as a hash ref
+    # can also return stats as a hash ref
     return { st_dev => 1, st_atime => 987654321 } if $f eq 'hash.stat';
 
     return {
