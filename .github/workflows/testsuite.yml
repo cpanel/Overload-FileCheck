@@ -45,6 +45,7 @@ jobs:
 
   perl:
     runs-on: ubuntu-latest
+    name: "Perl ${{ matrix.perl-version }}"
 
     needs:
       - ubuntu
