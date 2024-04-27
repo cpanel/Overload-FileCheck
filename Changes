@@ -2,6 +2,9 @@ Revision history for Overload-FileCheck
 
 {{$NEXT}}
 
+- Fix a PL_statcache bug when checking: -l $f || -e _
+- Add some extra test coverage for 'mock_all_from_stat'
+
 0.012     2022-01-20 19:00:46-07:00 America/Denver
 
 - Fix regression from previous release when checking PL_statcache
